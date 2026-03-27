@@ -90,6 +90,7 @@ const isExcludedAddon = (addon) => {
         </template>
 
         <div class="mt-6 text-center">
+            <!---->
             <button disabled class="__button --green">
                 Итого ({{ getPrice(order.total_amount) }})
             </button>

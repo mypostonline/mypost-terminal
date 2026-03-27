@@ -43,7 +43,7 @@ const { isOnline, isNetwork, post } = storeToRefs(propertyStore);
                     </div>
                 </div>
                 <div class="qr">
-                    <img src="/assets/tmp/108.svg" alt="">
+                    <img src="/assets/tmp/107.svg" alt="">
                 </div>
             </div>
         </div>
