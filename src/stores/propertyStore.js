@@ -51,7 +51,23 @@ export const usePropertyStore = defineStore('propertyStore', () => {
 
     const setProgram = (programId) => {
         if (property.value?.programs?.length) {
-            program.value = property.value.programs.find(i => i.id === parseInt(programId));
+            //program.value = property.value.programs.find(i => i.id === parseInt(programId));
+            programId = parseInt(programId);
+            const findProgram = property.value.programs.find(item => item.id === programId);
+            if(findProgram.id) {
+                program.value = findProgram;
+                if (findProgram?.included_addons?.length && property.value?.addons?.length) {
+                    findProgram.included_addons.forEach(addon => {
+                        property.value.addons.forEach(item => {
+                            if (item.id === addon.id) {
+                                item.isActive = true;
+                                item.isIncluded = true;
+                            }
+                        });
+                    });
+                }
+                return;
+            }
         }
     }
 
@@ -152,6 +168,7 @@ export const usePropertyStore = defineStore('propertyStore', () => {
             property.value.addons.forEach((addon) => {
                 if(addon.isActive) {
                     addon.isActive = false;
+                    addon.isIncluded = false;
                 }
             });
         }

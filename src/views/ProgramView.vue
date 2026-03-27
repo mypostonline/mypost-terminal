@@ -16,6 +16,7 @@ const { isOnline, isNetwork, property, post, program, order } = storeToRefs(prop
 const orderStore = useOrderStore();
 
 onBeforeMount(() => {
+    propertyStore.resetAddons();
     propertyStore.setProgram(route.params.programId);
 });
 
