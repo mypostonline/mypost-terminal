@@ -31,6 +31,14 @@
         transition: color 0.2s ease-out, background 0.2s ease-out;
     }
 
+    .__button.--medium {
+        min-width: 13rem;
+    }
+
+    .__button.--small {
+        min-width: initial;
+    }
+
     .__button:disabled {
         cursor: default;
         background-color: #bababa !important;

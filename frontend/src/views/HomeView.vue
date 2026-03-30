@@ -95,9 +95,7 @@ const { isOnline, isNetwork, post } = storeToRefs(propertyStore);
                     </svg>
                 </div>
                 <div class="description">
-                    Не удалось получить доступ
-                    к сервису из-за отсутствия
-                    интернет-соединения.
+                    Отсутствует интернет-соединение
                 </div>
             </div>
         </template>

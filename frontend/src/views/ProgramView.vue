@@ -11,7 +11,7 @@ const route = useRoute();
 const router = useRouter();
 
 const propertyStore = usePropertyStore();
-const { isOnline, isNetwork, property, post, program, order } = storeToRefs(propertyStore);
+const { isOnline, isNetwork, property, post, program, addons, order } = storeToRefs(propertyStore);
 
 const orderStore = useOrderStore();
 
@@ -19,6 +19,11 @@ onBeforeMount(() => {
     propertyStore.resetAddons();
     propertyStore.setProgram(route.params.programId);
 });
+
+const isActiveAddon = (addonId) => {
+    return !!addons.value.find(item => item.id === addonId);
+
+}
 
 const isExcludedAddon = (addon) => {
     if (program.value?.excluded_addons?.length) {
@@ -91,18 +96,12 @@ const isExcludedAddon = (addon) => {
         </template>
 
         <div class="mt-6 text-center">
-            <!---->
-            <button disabled class="__button --green">
-                Итого ({{ getPrice(order.total_amount) }})
-            </button>
-            <!--
             <router-link :to="`/programs/${program.id}/preorder`" class="__button --green">
-                Итого ({{ getPrice(order.total_amount) }})
+                Итого {{ getPrice(order.total_amount) }}
             </router-link>
-            -->
         </div>
         <div class="mt-6">
-            <router-link to="/" @click="router.back()" class="__button">Назад</router-link>
+            <router-link to="/programs" @click="router.back()" class="__button">Назад</router-link>
         </div>
         <div class="mt-6 text-center">
             <call-support-component />

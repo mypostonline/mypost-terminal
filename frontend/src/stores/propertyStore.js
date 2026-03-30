@@ -9,12 +9,13 @@ export const usePropertyStore = defineStore('propertyStore', () => {
 
     const isInitialized = ref(false);
     const isOnline = ref(typeof navigator !== 'undefined' ? navigator.onLine : true)
-    const isNetwork = ref(false)
+    const isNetwork = ref(false);
     const isLoading = ref(false);
     const isConnect = ref(false);
     const property = ref({});
     const post = ref({});
     const program = ref({});
+    const addons = ref([]);
     let intervalId = null;
 
 
@@ -28,11 +29,18 @@ export const usePropertyStore = defineStore('propertyStore', () => {
             total_amount: 0,
             payment_method: 'terminal'
         };
-        if(program.value?.id) {
+        if (program.value?.id) {
             result.amount += Number(program.value.price);
-            if(property.value?.addons?.length) {
+            /*
+            addons.value.forEach(addon => {
+                console.log( 'addons', addon );
+                result.addons.push(addon);
+                result.amount += addon.price;
+            });
+            */
+            if (property.value?.addons?.length) {
                 property.value.addons.forEach((addon) => {
-                    if(addon.isActive) {
+                    if (addon.isActive) {
                         if (addon.isComposite || addon.isIncluded) {
                             return;
                         }
@@ -54,7 +62,7 @@ export const usePropertyStore = defineStore('propertyStore', () => {
             //program.value = property.value.programs.find(i => i.id === parseInt(programId));
             programId = parseInt(programId);
             const findProgram = property.value.programs.find(item => item.id === programId);
-            if(findProgram.id) {
+            if (findProgram.id) {
                 program.value = findProgram;
                 if (findProgram?.included_addons?.length && property.value?.addons?.length) {
                     findProgram.included_addons.forEach(addon => {
@@ -64,25 +72,35 @@ export const usePropertyStore = defineStore('propertyStore', () => {
                                 item.isIncluded = true;
                             }
                         });
+                        /*
+                        addons.value.push({
+                            id: addon.id,
+                            name: addon.name,
+                            price: addon.price,
+                            quantity: 1,
+                            isIncluded: true
+                        });
+                        */
                     });
                 }
-                return;
             }
         }
     }
 
     const setProperty = (data) => {
-        property.value = data;
-        if (property.value?.id) {
-            if (isConnect.value === false && false) {
-                isConnect.value = true;
-                subscribeMqtt(`/property/${property.value.id}/status`, async data => {
-                    await getProperty();
-                });
+        if (property.value.id === undefined) {
+            property.value = data;
+            if (property.value.id) {
+                if (isConnect.value === false && false) {
+                    isConnect.value = true;
+                    subscribeMqtt(`/property/${property.value.id}/status`, async data => {
+                        await getProperty();
+                    });
+                }
             }
-            if (property.value?.posts?.length) {
-                post.value = property.value.posts.find(i => i.id === POST_ID);
-            }
+        }
+        if (data.posts?.length) {
+            post.value = data.posts.find(i => i.id === POST_ID);
         }
     }
 
@@ -130,22 +148,22 @@ export const usePropertyStore = defineStore('propertyStore', () => {
             isInitialized.value = true;
             intervalId = window.setInterval(() => {
                 getProperty();
-            }, 30_000);
+            }, 5_000);
         }
     }
 
     const selectAddon = (addon) => {
-        if(property.value?.addons?.length) {
+        if (property.value?.addons?.length) {
             property.value.addons.forEach(item => {
                 if (item.id === addon.id) {
                     const isActive = !item.isActive;
-                    if(item?.isIncluded) {
+                    if (item?.isIncluded) {
                         return;
                     }
-                    else if(item?.options?.length > 1) {
+                    else if (item?.options?.length > 1) {
                         item.options.forEach(option => {
                             property.value.addons.find(i => {
-                                if(i?.options?.length === 1) {
+                                if (i?.options?.length === 1) {
                                     if (i.options[0].id === option.id) {
                                         i.isActive = isActive;
                                         i.isComposite = isActive ? true : undefined;
@@ -154,7 +172,7 @@ export const usePropertyStore = defineStore('propertyStore', () => {
                             });
                         });
                     }
-                    else if(item?.options?.length === 1 && item.isComposite) {
+                    else if (item?.options?.length === 1 && item.isComposite) {
                         return;
                     }
                     item.isActive = isActive;
@@ -163,17 +181,42 @@ export const usePropertyStore = defineStore('propertyStore', () => {
         }
     }
 
+    const toggleAddonTEST = (addonId) => {
+        const addon = property.value?.addons?.find(item => item.id === addonId);
+        if (!addon || addon.isIncluded) return;
+        if (addon.options?.length === 1 && addon.isComposite) return;
+        const isActive = addons.value?.find(item => item.id === addonId);
+        if (isActive) {
+            if (isActive.isIncluded) {
+                return;
+            }
+            addons.value = addons.value.filter(item => item.id !== addonId);
+        }
+        else {
+            addons.value.push({
+                id: addon.id,
+                name: addon.name,
+                price: addon.price,
+                quantity: 1,
+            });
+        }
+    }
+
     const resetAddons = () => {
-        if(property.value?.addons?.length) {
+        addons.value = [];
+        /*
+        if (property.value?.addons?.length) {
             property.value.addons.forEach((addon) => {
-                if(addon.isActive) {
+                if (addon.isActive) {
                     addon.isActive = false;
                     addon.isIncluded = false;
                 }
             });
         }
+        */
     }
 
+    /*
     const isSupportCalled = ref(false);
     const callSupport = async () => {
         if (isSupportCalled.value !== false) return;
@@ -182,6 +225,35 @@ export const usePropertyStore = defineStore('propertyStore', () => {
         setTimeout(() => {
             isSupportCalled.value = false;
         }, 30_000);
+    }
+    */
+
+    const isSupportCalled = ref(false);
+    const secondsLeft = ref(0);
+    let timerInterval = null;
+
+    const callSupport = async () => {
+        if (isSupportCalled.value) return;
+        isSupportCalled.value = true;
+        secondsLeft.value = 30;
+        try {
+            await api(`/properties/${PROPERTY_ID}/callSupport`, {
+                method: 'POST',
+                data: { post_id: POST_ID }
+            });
+        }
+        catch (err) {
+            console.log('callSupport', err);
+        }
+        timerInterval = setInterval(() => {
+            if (secondsLeft.value > 0) {
+                secondsLeft.value--;
+            }
+            else {
+                clearInterval(timerInterval);
+                isSupportCalled.value = false;
+            }
+        }, 1000);
     }
 
 
@@ -193,14 +265,14 @@ export const usePropertyStore = defineStore('propertyStore', () => {
         property,
         post,
         program,
+        addons,
         order,
         init,
-        //setProperty,
-        //getProperty,
         setProgram,
         resetAddons,
         selectAddon,
         isSupportCalled,
         callSupport,
+        secondsLeft
     }
 })

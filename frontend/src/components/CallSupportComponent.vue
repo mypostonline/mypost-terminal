@@ -3,7 +3,7 @@ import { storeToRefs } from "pinia";
 import { usePropertyStore } from "@/stores/propertyStore.js";
 
 const propertyStore = usePropertyStore();
-const { isSupportCalled } = storeToRefs(propertyStore);
+const { isSupportCalled, secondsLeft } = storeToRefs(propertyStore);
 </script>
 
 <template>
@@ -12,7 +12,7 @@ const { isSupportCalled } = storeToRefs(propertyStore);
         <svg class="__svg" style="fill: var(--primary-color)">
             <use xlink:href="#call"></use>
         </svg>
-        <span class="__waiting is-waiting" v-show="isSupportCalled">Вызываем</span>
+        <span class="__waiting is-waiting" v-show="isSupportCalled">Вызываем {{ secondsLeft }}</span>
         <span v-show="!isSupportCalled">Вызов оператора</span>
     </button>
 
