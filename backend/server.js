@@ -1,9 +1,14 @@
+require('dotenv').config();
+
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
 const WebSocket = require('ws');
 const { VtkClient } = require('./vendotek-client');
+
+const VTK_HOST = process.env.VTK_HOST || '192.168.1.1';
+const VTK_PORT = Number(process.env.VTK_PORT || 62801);
 
 const app = express();
 
@@ -19,8 +24,8 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
 const vendotek = new VtkClient({
-    host: '192.168.3.29',
-    port: 62801,
+    host: VTK_HOST,
+    port: VTK_PORT,
     waitStaBeforeVrp: false,
     debug: true,
 });
@@ -71,10 +76,9 @@ app.get('/api/status', (req, res) => {
 app.post('/api/pay', async (req, res) => {
     try {
 
-        //const delay = ms => new Promise(res => setTimeout(res, ms));
-        //await delay(5000);
+        const delay = ms => new Promise(res => setTimeout(res, ms));
+        await delay(5000);
 
-        /*
         res.json({
             ok: true,
             result: {
@@ -88,7 +92,6 @@ app.post('/api/pay', async (req, res) => {
                 }
             }
         });
-        */
 
         /*
         res.json({

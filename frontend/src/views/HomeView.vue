@@ -4,6 +4,8 @@ import { usePropertyStore } from "@/stores/propertyStore.js";
 import BannersComponent from "@/components/BannersComponent.vue";
 import CallSupportComponent from "@/components/CallSupportComponent.vue";
 
+const VITE_QR_SRC = import.meta.env.VITE_QR_SRC;
+
 const propertyStore = usePropertyStore();
 const { isOnline, isNetwork, post } = storeToRefs(propertyStore);
 
@@ -43,7 +45,7 @@ const { isOnline, isNetwork, post } = storeToRefs(propertyStore);
                     </div>
                 </div>
                 <div class="qr">
-                    <img src="/assets/tmp/107.svg" alt="">
+                    <img :src="VITE_QR_SRC" alt="">
                 </div>
             </div>
         </div>

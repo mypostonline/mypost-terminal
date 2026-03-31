@@ -2,7 +2,10 @@ import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
 import { subscribeMqtt } from '@/functions/mqtt.js';
 import api from '@/functions/api.js';
-import { POST_ID, PROPERTY_ID } from '@/config.js';
+//import { POST_ID, PROPERTY_ID } from '@/config.js';
+
+const PROPERTY_ID = Number(import.meta.env.VITE_PROPERTY_ID);
+const POST_ID = Number(import.meta.env.VITE_POST_ID);
 
 
 export const usePropertyStore = defineStore('propertyStore', () => {
@@ -91,7 +94,7 @@ export const usePropertyStore = defineStore('propertyStore', () => {
         if (property.value.id === undefined) {
             property.value = data;
             if (property.value.id) {
-                if (isConnect.value === false && false) {
+                if (isConnect.value === false) {
                     isConnect.value = true;
                     subscribeMqtt(`/property/${property.value.id}/status`, async data => {
                         await getProperty();
@@ -148,7 +151,7 @@ export const usePropertyStore = defineStore('propertyStore', () => {
             isInitialized.value = true;
             intervalId = window.setInterval(() => {
                 getProperty();
-            }, 5_000);
+            }, 60_000);
         }
     }
 
