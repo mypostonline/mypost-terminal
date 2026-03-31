@@ -95,13 +95,19 @@ const isExcludedAddon = (addon) => {
             </div>
         </template>
 
-        <div class="mt-6 text-center">
-            <router-link :to="`/programs/${program.id}/preorder`" class="__button --green">
-                Итого {{ getPrice(order.total_amount) }}
-            </router-link>
-        </div>
-        <div class="mt-6">
-            <router-link to="/programs" @click="router.back()" class="__button">Назад</router-link>
+        <div class="mt-6" style="display: grid; grid-template-columns: 1fr 2fr 1fr; align-items: center;">
+            <div>
+                <router-link to="/programs" class="__button --small" @click="router.back()">
+                    <svg class="__svg" style="fill: var(--primary-color); transform: rotate(180deg);">
+                        <use xlink:href="#arrow"></use>
+                    </svg>
+                </router-link>
+            </div>
+            <div class=" text-center">
+                <router-link :to="`/programs/${program.id}/preorder`" class="__button --green">
+                    Итого {{ getPrice(order.total_amount) }}
+                </router-link>
+            </div>
         </div>
         <div class="mt-6 text-center">
             <call-support-component />

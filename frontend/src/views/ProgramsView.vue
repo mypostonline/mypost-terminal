@@ -43,7 +43,11 @@ const { isOnline, isNetwork, property, post } = storeToRefs(propertyStore);
                 </div>
             </div>
             <div class="mt-6">
-                <router-link to="/" class="__button">Назад</router-link>
+                <router-link to="/" class="__button --small">
+                    <svg class="__svg" style="fill: var(--primary-color); transform: rotate(180deg);">
+                        <use xlink:href="#arrow"></use>
+                    </svg>
+                </router-link>
             </div>
             <div class="mt-6 text-center">
                 <call-support-component />

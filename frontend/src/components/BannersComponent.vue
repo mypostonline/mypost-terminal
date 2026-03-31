@@ -32,7 +32,7 @@ const slides = computed(() => {
 <template>
 
     <div v-if="slides.length > 0" class="banners">
-        <Splide :options="{ type: 'loop', rewind: true, arrows: false, gap: 20, pagination: false, autoplay: true }">
+        <Splide :options="{ type: 'loop', rewind: true, arrows: false, gap: 20, pagination: true, autoplay: true }">
             <SplideSlide v-for="slide in slides">
                 <div class="slide">
                     <img :src="slide.image" alt="">

@@ -75,12 +75,12 @@ main {
     display: flex;
     flex-direction: column;
     padding: 1rem;
+    overflow: hidden;
 }
 
 .banners {
     margin: 0 -1rem 0;
     padding: 0 1rem 0;
-    overflow: hidden;
 }
 
 .banners .splide__track {
@@ -100,6 +100,18 @@ main {
     object-fit: cover;
     width: 100%;
     height: 100%
+}
+
+.splide__pagination {
+    bottom: -1.25em !important;
+}
+
+.splide__pagination__page {
+    background: var(--primary-color) !important;
+}
+
+.splide__pagination__page.is-active {
+    opacity: 1 !important;
 }
 
 .scan-qr {
@@ -140,6 +152,11 @@ main {
 .scan-qr-items .items > div > span {
     font-weight: 600;
     line-height: 1.2em;
+}
+
+.scan-qr-items .qr {
+    border: 4px solid var(--primary-color);
+    border-radius: 0.75rem;
 }
 
 .scan-qr-items .qr > img {
@@ -339,7 +356,7 @@ main {
     display: flex;
     justify-content: space-between;
     gap: 0.5rem;
-    font-size: 0.75rem;
+    font-size: 0.9rem;
     font-weight: 600;
     padding-top: 0.25rem;
     margin-top: 0.75rem;

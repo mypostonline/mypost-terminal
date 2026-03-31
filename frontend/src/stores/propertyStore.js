@@ -203,8 +203,7 @@ export const usePropertyStore = defineStore('propertyStore', () => {
     }
 
     const resetAddons = () => {
-        addons.value = [];
-        /*
+        //addons.value = [];
         if (property.value?.addons?.length) {
             property.value.addons.forEach((addon) => {
                 if (addon.isActive) {
@@ -213,7 +212,6 @@ export const usePropertyStore = defineStore('propertyStore', () => {
                 }
             });
         }
-        */
     }
 
     /*

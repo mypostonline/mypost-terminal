@@ -69,16 +69,23 @@ const countAddons = computed(() => property.value.addons?.filter(item => item.is
         <div style="font-size: 0.75rem; font-weight: 500; margin-top: 1rem;">
             *Для операций с бонусами оплачивайте через сервис
         </div>
-        <div class="mt-6 text-center">
-            <button class="__button --green" @click="createOrder">
-                Оплатить {{ getPrice(order.total_amount) }}
-            </button>
+        <div class="mt-6" style="display: grid; grid-template-columns: 1fr 2fr 1fr; align-items: center;">
+            <div>
+                <router-link :to="`/programs/${program.id}`" class="__button --small" @click="router.back()">
+                    <svg class="__svg" style="fill: var(--primary-color); transform: rotate(180deg);">
+                        <use xlink:href="#arrow"></use>
+                    </svg>
+                </router-link>
+            </div>
+            <div>
+                <button class="__button --green" @click="createOrder">
+                    Оплатить {{ getPrice(order.total_amount) }}
+                </button>
+            </div>
         </div>
 
         <div class="mt-6" style="display: grid; grid-template-columns: 1fr 2fr 1fr; align-items: center;">
-            <div>
-                <router-link :to="`/programs/${program.id}`" @click="router.back()" class="__button --small">Назад</router-link>
-            </div>
+            <div></div>
             <div class="text-center">
                 <svg class="__svg" style="fill: var(--primary-color); width: 10rem; height: 7rem;">
                     <use xlink:href="#nfc"></use>
