@@ -1,6 +1,8 @@
-require('dotenv').config();
-
 const path = require('path');
+require('dotenv').config({
+    path: path.resolve(__dirname, '.env'),
+});
+
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
@@ -76,9 +78,10 @@ app.get('/api/status', (req, res) => {
 app.post('/api/pay', async (req, res) => {
     try {
 
-        const delay = ms => new Promise(res => setTimeout(res, ms));
-        await delay(5000);
-
+        // const delay = ms => new Promise(res => setTimeout(res, ms));
+        // await delay(5000);
+        
+        /*
         res.json({
             ok: true,
             result: {
@@ -92,6 +95,7 @@ app.post('/api/pay', async (req, res) => {
                 }
             }
         });
+        */
 
         /*
         res.json({
