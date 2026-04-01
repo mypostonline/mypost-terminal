@@ -102,6 +102,17 @@ export const usePropertyStore = defineStore('propertyStore', () => {
                 }
             }
         }
+        else {
+            property.value.active = data.active;
+            property.value.is_open = data.is_open;
+            property.value.working_hours = data.working_hours;
+            property.value.dry_active = data.dry_active;
+            property.value.is_dry_open = data.is_dry_open;
+            property.value.dry_working_hours = data.dry_working_hours;
+            property.value.programs = data.programs;
+        }
+        console.log( 'setProperty', property.value );
+
         if (data.posts?.length) {
             post.value = data.posts.find(i => i.id === POST_ID);
         }
@@ -151,7 +162,7 @@ export const usePropertyStore = defineStore('propertyStore', () => {
             isInitialized.value = true;
             intervalId = window.setInterval(() => {
                 getProperty();
-            }, 60_000);
+            }, 4_000);
         }
     }
 

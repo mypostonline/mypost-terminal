@@ -4,9 +4,13 @@ import { useRoute } from "vue-router";
 import { storeToRefs } from "pinia";
 import { useOrderStore } from "@/stores/orderStore.js";
 import { getPrice } from "@/functions/helpers.js";
+import { usePropertyStore } from "@/stores/propertyStore.js";
 import CallSupportComponent from "@/components/CallSupportComponent.vue";
 
 const route = useRoute();
+
+const propertyStore = usePropertyStore();
+const { property } = storeToRefs(propertyStore);
 
 const orderStore = useOrderStore();
 const { isLoading, order } = storeToRefs(orderStore);
