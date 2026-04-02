@@ -14,7 +14,7 @@ const { isInitialized } = storeToRefs(propertyStore);
 
 onMounted(async () => {
     if (route.name !== 'home') {
-        //await router.replace({ path: '/' });
+        await router.replace({ path: '/' });
     }
     await propertyStore.init();
 });

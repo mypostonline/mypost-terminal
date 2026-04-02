@@ -111,7 +111,7 @@ export const usePropertyStore = defineStore('propertyStore', () => {
             property.value.dry_working_hours = data.dry_working_hours;
             property.value.programs = data.programs;
         }
-        console.log( 'setProperty', property.value );
+        //console.log( 'setProperty', property.value );
 
         if (data.posts?.length) {
             post.value = data.posts.find(i => i.id === POST_ID);
@@ -162,7 +162,7 @@ export const usePropertyStore = defineStore('propertyStore', () => {
             isInitialized.value = true;
             intervalId = window.setInterval(() => {
                 getProperty();
-            }, 4_000);
+            }, 60_000);
         }
     }
 
@@ -170,6 +170,8 @@ export const usePropertyStore = defineStore('propertyStore', () => {
         if (property.value?.addons?.length) {
             property.value.addons.forEach(item => {
                 if (item.id === addon.id) {
+                    console.log('itemitemitem', item);
+
                     const isActive = !item.isActive;
                     if (item?.isIncluded) {
                         return;
