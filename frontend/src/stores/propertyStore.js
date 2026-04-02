@@ -170,8 +170,6 @@ export const usePropertyStore = defineStore('propertyStore', () => {
         if (property.value?.addons?.length) {
             property.value.addons.forEach(item => {
                 if (item.id === addon.id) {
-                    console.log('itemitemitem', item);
-
                     const isActive = !item.isActive;
                     if (item?.isIncluded) {
                         return;
@@ -225,6 +223,7 @@ export const usePropertyStore = defineStore('propertyStore', () => {
                 if (addon.isActive) {
                     addon.isActive = false;
                     addon.isIncluded = false;
+                    addon.isComposite = false;
                 }
             });
         }
