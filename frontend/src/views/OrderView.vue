@@ -30,7 +30,7 @@ const isPaid = ref(false);
 const payOrder = async (amountMinor) => {
     isInit.value = true;
     isPayment.value = true;
-    const res = await fetch('http://localhost:3001/api/pay', {
+    const res = await fetch('/api/pay', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

@@ -151,7 +151,7 @@ app.get(/.*/, (req, res) => {
 });
 
 server.listen(3001, async () => {
-    console.log('Server started on http://0.0.0.0:3001');
+    console.log('Server started on http://127.0.0.1:3001');
 
     try {
         await vendotek.start();
