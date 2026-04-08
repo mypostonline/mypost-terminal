@@ -82,9 +82,10 @@ export const useOrderStore = defineStore('orderStore', () => {
         return response;
     }
 
-    const paidOrder = async (orderId) => {
+    const paidOrder = async (orderId, paidAmount) => {
         await api('/orders/' + orderId + '/paid', {
-            method: 'POST'
+            method: 'POST',
+            data: { paid_amount: paidAmount }
         });
     }
 

@@ -45,7 +45,7 @@ const payOrder = async (amountMinor) => {
     console.log('response', response);
     isPayment.value = false;
     if (response?.result?.approved) {
-        await orderStore.paidOrder(order.value.id);
+        await orderStore.paidOrder(order.value.id, response.result?.approvedAmount);
         isPaid.value = true;
     }
     else {
