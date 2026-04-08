@@ -30,7 +30,8 @@ export const usePropertyStore = defineStore('propertyStore', () => {
             addons: [],
             amount: 0,
             total_amount: 0,
-            payment_method: 'terminal'
+            source: 'terminal',
+            payment_method: 'vendotek',
         };
         if (program.value?.id) {
             result.amount += Number(program.value.price);
