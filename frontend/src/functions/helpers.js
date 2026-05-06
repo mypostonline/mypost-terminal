@@ -19,7 +19,15 @@ export const wordEndPasses = (number) => {
     return number + ' ' + wordEnd(number, ['проходов', 'проход', 'прохода']);
 }
 
-export const getNumber = (number = 0) => {
+export const getNumber = (value = 0) => {
+    const number = Number(
+        String(value)
+            .replace(/\s/g, '')
+            .replace(',', '.')
+    );
+    if (!Number.isFinite(number)) {
+        return '0';
+    }
     return parseFloat(number.toFixed(2)).toLocaleString('ru-RU');
 }
 
