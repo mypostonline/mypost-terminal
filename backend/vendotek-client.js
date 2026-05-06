@@ -276,7 +276,7 @@ class VtkClient extends EventEmitter {
 
     log(...args) {
         if (this.debug) {
-            console.log('[Vendotek]', ...args);
+            console.log(new Date().toISOString(), '[Vendotek]', ...args);
         }
     }
 
@@ -692,6 +692,8 @@ class VtkClient extends EventEmitter {
                 String(msg.operationNumber || '') === String(this.operationNumber),
             this.operationTimeoutSec * 1000
         );
+
+        this.sendIdl();
 
         return response;
     }

@@ -16,7 +16,7 @@ const app = express();
 
 app.use(cors({
     origin: 'http://localhost:5173',
-    methods: ['GET', 'POST', 'OPTIONS'],
+    methods: [ 'GET', 'POST', 'OPTIONS' ],
     credentials: true,
 }));
 
@@ -33,12 +33,12 @@ const vendotek = new VtkClient({
 });
 
 vendotek.on('status', (event) => {
-    console.log('[Vendotek status]', event);
+    console.log(new Date().toISOString(), '[Vendotek status]', event);
     broadcast({ channel: 'vendotek-status', payload: event });
 });
 
 vendotek.on('raw', (event) => {
-    console.log('[Vendotek raw]', event);
+    console.log(new Date().toISOString(), '[Vendotek raw]', event);
     broadcast({ channel: 'vendotek-raw', payload: event });
 });
 
@@ -55,14 +55,14 @@ vendotek.on('info', (msg) => {
 });
 
 vendotek.on('error', (err) => {
-    console.error('[Vendotek error]', err);
+    console.error(new Date().toISOString(), '[Vendotek error]', err);
     broadcast({
         channel: 'vendotek-error',
         payload: { message: err.message },
     });
 });
 
-function broadcast(data) {
+function broadcast (data) {
     const msg = JSON.stringify(data);
     for (const client of wss.clients) {
         if (client.readyState === WebSocket.OPEN) {
@@ -77,44 +77,6 @@ app.get('/api/status', (req, res) => {
 
 app.post('/api/pay', async (req, res) => {
     try {
-
-        // const delay = ms => new Promise(res => setTimeout(res, ms));
-        // await delay(5000);
-
-        /*
-        res.json({
-            ok: true,
-            result: {
-                operationNumber: 5,
-                approved: true,
-                approvedAmount: 500,
-                response: {
-                    messageName: "VRP",
-                    operationNumber: "5",
-                    amount: "500"
-                }
-            }
-        });
-        */
-
-        /*
-        res.json({
-            ok: true,
-            result: {
-                operationNumber: 5,
-                approved: false,
-                approvedAmount: 0,
-                response: {
-                    messageName: "VRP",
-                    operationNumber: "5",
-                    amount: "0"
-                }
-            }
-        });
-        return;
-        */
-
-
         const amountMinor = Number(req.body.amountMinor);
         const productId = req.body.productId ?? 1;
         const productName = req.body.productName ?? 'WASH';
@@ -126,17 +88,34 @@ app.post('/api/pay', async (req, res) => {
             });
         }
 
-        const result = await vendotek.startPayment({
+        const paymentResult = await vendotek.startPayment({
             amountMinor,
             productId,
             productName,
         });
+        console.log(new Date().toISOString(), 'paymentResult', paymentResult);
+
+        if (!paymentResult.approved) {
+            return res.json({
+                ok: true,
+                payment: paymentResult
+            });
+        }
+
+        const finResult = await vendotek.finalizeSuccess(
+            paymentResult.approvedAmount,
+            productId,
+            productName,
+        );
+        console.log(new Date().toISOString(), 'finResult', finResult);
 
         res.json({
             ok: true,
-            result,
+            payment: paymentResult,
+            fin: finResult
         });
-    } catch (err) {
+    }
+    catch (err) {
         res.status(500).json({
             ok: false,
             error: err.message,
@@ -151,12 +130,13 @@ app.get(/.*/, (req, res) => {
 });
 
 server.listen(3001, async () => {
-    console.log('Server started on http://127.0.0.1:3001');
+    console.log(new Date().toISOString(), 'Server started on http://127.0.0.1:3001');
 
     try {
         await vendotek.start();
-        console.log('Vendotek ready');
-    } catch (err) {
-        console.error('Vendotek start failed:', err.message);
+        console.log(new Date().toISOString(), 'Vendotek ready');
+    }
+    catch (err) {
+        console.error(new Date().toISOString(), 'Vendotek start failed:', err.message);
     }
 });
