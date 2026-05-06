@@ -38,7 +38,7 @@ const payOrder = async (amountMinor) => {
         body: JSON.stringify({
             amountMinor: amountMinor * 100,
             productId: 1,
-            productName: 'Мойка',
+            productName: 'WASH',
         }),
     });
     const response = await res.json();
