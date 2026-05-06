@@ -11,6 +11,7 @@ const { VtkClient } = require('./vendotek-client');
 
 const VTK_HOST = process.env.VTK_HOST || '192.168.1.1';
 const VTK_PORT = Number(process.env.VTK_PORT || 62801);
+const DEBUG = process.env.DEBUG === 'true';
 
 const app = express();
 
@@ -29,16 +30,20 @@ const vendotek = new VtkClient({
     host: VTK_HOST,
     port: VTK_PORT,
     waitStaBeforeVrp: false,
-    debug: true,
+    debug: DEBUG,
 });
 
 vendotek.on('status', (event) => {
-    console.log(new Date().toISOString(), '[Vendotek status]', event);
+    if (DEBUG) {
+        console.log(new Date().toISOString(), '[Vendotek status]', event);
+    }
     broadcast({ channel: 'vendotek-status', payload: event });
 });
 
 vendotek.on('raw', (event) => {
-    console.log(new Date().toISOString(), '[Vendotek raw]', event);
+    if (DEBUG) {
+        console.log(new Date().toISOString(), '[Vendotek raw]', event);
+    }
     broadcast({ channel: 'vendotek-raw', payload: event });
 });
 
