@@ -161,38 +161,21 @@ test('rejects a parallel cash payment', async () => {
     );
 });
 
-test('rejects overpayment when it is disabled', async () => {
-    const { service } = await createService({
-        allowOverpayment: false,
-    });
+test('always completes after a correctly recognized overpayment', async () => {
+    const { acceptor, service } = await createService();
     await service.start({
-        orderId: '23',
-        amountMinor: 5_000,
-    });
-
-    assert.throws(
-        () => service.insertMockBill(10_000),
-        error => error.code === 'overpayment_not_allowed',
-    );
-    assert.equal(service.getSession().acceptedAmountMinor, 0);
-});
-
-test('records a physically accepted overpayment and requires attention', async () => {
-    const { acceptor, service } = await createService({
-        allowOverpayment: false,
-    });
-    await service.start({
-        orderId: '23-hardware-overpayment',
+        orderId: '23-overpayment',
         amountMinor: 5_000,
     });
 
     acceptor.simulateBill(10_000);
 
     const session = service.getSession();
-    assert.equal(session.state, 'attention_required');
+    assert.equal(session.state, 'completed');
     assert.equal(session.acceptedAmountMinor, 10_000);
     assert.equal(session.overpaymentAmountMinor, 5_000);
-    assert.equal(session.error, 'unexpected_overpayment');
+    assert.equal(session.error, null);
+    assert.equal(session.changeCredit.amountMinor, 5_000);
 });
 
 test('allows cancellation only before accepting cash', async () => {

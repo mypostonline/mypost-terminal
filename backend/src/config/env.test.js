@@ -15,7 +15,6 @@ test('loads backend defaults without an env file', () => {
         config.billAcceptor.validAmountsRub,
         [ 50, 100, 500, 1000 ]
     );
-    assert.equal(config.cashPayment.allowOverpayment, true);
     assert.equal(config.cashPayment.timeoutSec, 300);
 });
 
@@ -28,7 +27,6 @@ test('normalizes configured backend values', () => {
             VENDETEK_ENABLED: 'false',
             BILL_ACCEPTOR_MODE: 'mock',
             BILL_ACCEPTOR_VALID_AMOUNTS: '100, 200,500',
-            CASH_ALLOW_OVERPAYMENT: 'true',
         },
     });
 
@@ -37,7 +35,6 @@ test('normalizes configured backend values', () => {
     assert.equal(config.vendotek.enabled, false);
     assert.equal(config.billAcceptor.mode, 'mock');
     assert.deepEqual(config.billAcceptor.validAmountsRub, [ 100, 200, 500 ]);
-    assert.equal(config.cashPayment.allowOverpayment, true);
 });
 
 test('rejects invalid numeric configuration', () => {

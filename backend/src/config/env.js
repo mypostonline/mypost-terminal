@@ -95,7 +95,6 @@ const loadConfig = ({
                 env.BILL_ACCEPTOR_GPIOMON_COMMAND || 'gpiomon',
         },
         cashPayment: {
-            allowOverpayment: env.CASH_ALLOW_OVERPAYMENT !== 'false',
             timeoutSec: readNumber(
                 env,
                 'CASH_PAYMENT_TIMEOUT_SEC',

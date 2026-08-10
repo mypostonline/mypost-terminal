@@ -42,7 +42,6 @@ const createServices = config => {
 
     const cashPayments = new CashPaymentService({
         acceptor: billAcceptor,
-        allowOverpayment: config.cashPayment.allowOverpayment,
         sessionTimeoutSec: config.cashPayment.timeoutSec,
         changeCreditService: cashChangeCredit,
         debug: config.debug,

@@ -15,7 +15,6 @@ class CashPaymentError extends Error {
 class CashPaymentService extends EventEmitter {
     constructor ({
         acceptor,
-        allowOverpayment = true,
         sessionTimeoutSec = 300,
         changeCreditService = null,
         debug = false,
@@ -30,7 +29,6 @@ class CashPaymentService extends EventEmitter {
         }
 
         this.acceptor = acceptor;
-        this.allowOverpayment = Boolean(allowOverpayment);
         this.changeCreditService = changeCreditService;
         this.sessionTimeoutMs = Number(sessionTimeoutSec) * 1000;
         this.debug = debug;
@@ -198,13 +196,6 @@ class CashPaymentService extends EventEmitter {
                 reason: 'invalid_bill_amount',
             };
         }
-        if (!this.allowOverpayment && amountMinor > this.session.remainingAmountMinor) {
-            return {
-                accepted: false,
-                reason: 'overpayment_not_allowed',
-            };
-        }
-
         return { accepted: true };
     }
 
@@ -235,23 +226,6 @@ class CashPaymentService extends EventEmitter {
         const bills = [ ...(this.session?.bills || []), bill ];
 
         if (!decision.accepted) {
-            if (
-                this.session?.state === 'accepting' &&
-                decision.reason === 'overpayment_not_allowed'
-            ) {
-                const acceptedAmount =
-                    this.session.acceptedAmountMinor + normalizedAmount;
-                this.updateSession({
-                    acceptedAmountMinor: acceptedAmount,
-                    remainingAmountMinor: 0,
-                    overpaymentAmountMinor:
-                        acceptedAmount - this.session.targetAmountMinor,
-                    lastBillMinor: normalizedAmount,
-                    bills,
-                });
-                this.emitSession('bill_accepted');
-                this.finishWithAttention('unexpected_overpayment');
-            }
             return;
         }
 
