@@ -2,15 +2,12 @@
 import { storeToRefs } from "pinia";
 import { usePropertyStore } from "@/stores/propertyStore.js";
 import { getPrice, wordEndPasses } from "@/functions/helpers.js";
-import { useRouter } from "vue-router";
 import CallSupportComponent from "@/components/CallSupportComponent.vue";
 
-const router = useRouter();
-
 const propertyStore = usePropertyStore();
-const { isOnline, isNetwork, property, post } = storeToRefs(propertyStore);
+const { property } = storeToRefs(propertyStore);
 
-const idProgramAvailable = (program) => {
+const isProgramAvailable = (program) => {
     if (program?.included_addons?.length && !property?.value?.is_dry_open) {
         return false;
     }
@@ -25,15 +22,19 @@ const idProgramAvailable = (program) => {
 
         <div v-if="property?.programs?.length">
             <div class="property-programs">
-                <template v-for="(program, index) in property.programs" :key="index">
-                    <div v-if="idProgramAvailable(program)" class="program card_background">
+                <template v-for="program in property.programs" :key="program.id">
+                    <div v-if="isProgramAvailable(program)" class="program card_background">
                         <div class="content">
                             <div class="header">
                                 <div class="label">Опции {{ program.options?.length }}</div>
                                 <div class="duration">{{ program.duration + ' мин' }}</div>
                             </div>
                             <div v-if="program.options?.length" class="items">
-                                <div v-for="option in program.options" class="item">
+                                <div
+                                    v-for="option in program.options"
+                                    :key="option.id"
+                                    class="item"
+                                >
                                     <div class="image">
                                         <img v-if="option.image" :src="option.image" alt="">
                                     </div>
@@ -48,7 +49,10 @@ const idProgramAvailable = (program) => {
                                 <div class="price">{{ getPrice(program.price) }}</div>
                             </div>
                         </div>
-                        <router-link :to="`/programs/${program.id}`" />
+                        <router-link
+                            :to="`/programs/${program.id}`"
+                            :aria-label="`Выбрать программу ${program.name}`"
+                        />
                     </div>
                 </template>
             </div>

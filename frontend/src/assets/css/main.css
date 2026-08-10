@@ -1,6 +1,5 @@
 @import 'tailwindcss';
 @import './components.css';
-@import './style.css';
 @import '../fonts/Inter/stylesheet.css';
 
 :root {
@@ -155,7 +154,7 @@ main {
 }
 
 .scan-qr-items .qr {
-    border: 4px solid var(--primary-color);
+    border: 0.2rem solid var(--primary-color);
     border-radius: 0.75rem;
 }
 
@@ -357,10 +356,11 @@ main {
     justify-content: space-between;
     gap: 0.5rem;
     font-size: 0.9rem;
-    font-weight: 600;
+    font-weight: 700;
     padding-top: 0.25rem;
     margin-top: 0.75rem;
     border-top: 1px solid #ffffff;
+    text-transform: uppercase;
 }
 
 .property-programs .program .items {

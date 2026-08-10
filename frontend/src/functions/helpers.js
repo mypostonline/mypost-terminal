@@ -1,5 +1,3 @@
-import { DateTime } from "luxon";
-
 export const wordEnd = (number, forms = ['проходов', 'проход', 'прохода'], zeroForm = null) => {
     if (number === 0 && zeroForm !== null) {
         return zeroForm;

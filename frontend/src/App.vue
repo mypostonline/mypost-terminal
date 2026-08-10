@@ -1,34 +1,34 @@
 <script setup>
 import { onMounted } from "vue";
-import { storeToRefs } from "pinia";
-import { useRoute, useRouter } from "vue-router";
+import { useRoute } from "vue-router";
 import { usePropertyStore } from "@/stores/propertyStore.js";
 import { useInactivity } from '@/composables/useInactivity';
 import AppHeader from "@/AppHeader.vue";
 
 const route = useRoute();
-const router = useRouter();
 
 const propertyStore = usePropertyStore();
-const { isInitialized } = storeToRefs(propertyStore);
+
+const DEFAULT_INACTIVITY_SECONDS = 60;
+const configuredInactivitySeconds = Number(
+    import.meta.env.VITE_INACTIVITY
+);
+const inactivitySeconds =
+    Number.isFinite(configuredInactivitySeconds) &&
+    configuredInactivitySeconds > 0
+        ? configuredInactivitySeconds
+        : DEFAULT_INACTIVITY_SECONDS;
 
 onMounted(async () => {
-    if (route.name !== 'home') {
-        await router.replace({ path: '/' });
-    }
     await propertyStore.init();
 });
 
-useInactivity(60_000);
+useInactivity(inactivitySeconds * 1000);
 </script>
 
 <template>
-
-    <template v-if="isInitialized">
-        <app-header />
-        <router-view :key="route.fullPath" />
-    </template>
-
+    <app-header />
+    <router-view :key="route.fullPath" />
 </template>
 
 <style scoped>

@@ -3,7 +3,6 @@ import { onBeforeMount } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { storeToRefs } from "pinia";
 import { usePropertyStore } from "@/stores/propertyStore.js";
-import { useOrderStore } from "@/stores/orderStore.js";
 import { getNumber, getPrice, wordEndPasses } from "@/functions/helpers.js";
 import CallSupportComponent from "@/components/CallSupportComponent.vue";
 
@@ -11,19 +10,14 @@ const route = useRoute();
 const router = useRouter();
 
 const propertyStore = usePropertyStore();
-const { isOnline, isNetwork, property, post, program, addons, order } = storeToRefs(propertyStore);
-
-const orderStore = useOrderStore();
+const { property, program, order } = storeToRefs(propertyStore);
 
 onBeforeMount(() => {
     propertyStore.resetAddons();
-    propertyStore.setProgram(route.params.programId);
+    if (!propertyStore.setProgram(route.params.programId)) {
+        router.replace('/programs');
+    }
 });
-
-const isActiveAddon = (addonId) => {
-    return !!addons.value.find(item => item.id === addonId);
-
-}
 
 const isExcludedAddon = (addon) => {
     if (program.value?.excluded_addons?.length) {
@@ -36,7 +30,7 @@ const isExcludedAddon = (addon) => {
 
 <template>
 
-    <main>
+    <main v-if="program.id">
 
         <div class="property-program-details card_background">
             <div class="header">
@@ -44,7 +38,11 @@ const isExcludedAddon = (addon) => {
                 <div class="duration">{{ program.duration + ' мин' }}</div>
             </div>
             <div v-if="program.options?.length" class="items">
-                <div v-for="option in program.options" class="item">
+                <div
+                    v-for="option in program.options"
+                    :key="option.id"
+                    class="item"
+                >
                     <div class="image">
                         <img v-if="option.image" :src="option.image" alt="">
                     </div>
@@ -64,8 +62,8 @@ const isExcludedAddon = (addon) => {
             <h2 class="font-semibold text-(--primary-color) mb-2 mt-6">Выбор дополнительных программ</h2>
             <div class="property-addons addons">
                 <button
-                    v-for="(addon, index) in property.addons"
-                    :key="index"
+                    v-for="addon in property.addons"
+                    :key="addon.id"
                     :class="{'--active': addon.isActive}"
                     class="addon card_background"
                     @click="propertyStore.selectAddon(addon)"
@@ -97,7 +95,7 @@ const isExcludedAddon = (addon) => {
 
         <div class="mt-6" style="display: grid; grid-template-columns: 1fr 2fr 1fr; align-items: center;">
             <div>
-                <router-link to="/programs" class="__button --small" @click="router.back()">
+                <router-link to="/programs" class="__button --small">
                     <svg class="__svg" style="fill: var(--primary-color); transform: rotate(180deg);">
                         <use xlink:href="#arrow"></use>
                     </svg>

@@ -1,11 +1,12 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "server.js",
+  "description": "Local payment and hardware gateway for the MYPOST terminal",
+  "main": "src/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "smoke:bill-acceptor": "node scripts/bill-acceptor-smoke.mjs",
+    "test": "node --test",
+    "start": "node src/server.js"
   },
   "keywords": [],
   "author": "",
@@ -15,6 +16,6 @@
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
-    "ws": "^8.20.0"
+    "ws": "^8.21.0"
   }
 }

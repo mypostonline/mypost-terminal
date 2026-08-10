@@ -1,19 +1,7 @@
 <script setup>
-import { computed, ref } from "vue";
-import { storeToRefs } from "pinia";
-import { useRoute } from "vue-router";
-import { useAppStore } from "@/stores/appStore.js";
-import { usePropertyStore } from "@/stores/propertyStore.js";
+import { computed } from "vue";
 import { Splide, SplideSlide } from "@splidejs/vue-splide";
 import '@splidejs/vue-splide/css';
-
-const route = useRoute();
-
-const appStore = useAppStore();
-const { weather } = storeToRefs(appStore);
-
-const propertyStore = usePropertyStore();
-const { property } = storeToRefs(propertyStore);
 
 const slides = computed(() => {
     const result = [];
@@ -33,7 +21,7 @@ const slides = computed(() => {
 
     <div v-if="slides.length > 0" class="banners">
         <Splide :options="{ type: 'loop', rewind: true, arrows: false, gap: 20, pagination: true, autoplay: true }">
-            <SplideSlide v-for="slide in slides">
+            <SplideSlide v-for="slide in slides" :key="slide.image">
                 <div class="slide">
                     <img :src="slide.image" alt="">
                 </div>

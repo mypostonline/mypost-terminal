@@ -7,7 +7,13 @@ import CallSupportComponent from "@/components/CallSupportComponent.vue";
 const VITE_QR_SRC = import.meta.env.VITE_QR_SRC;
 
 const propertyStore = usePropertyStore();
-const { isOnline, isNetwork, post } = storeToRefs(propertyStore);
+const {
+    isInitialized,
+    isOnline,
+    isNetwork,
+    post,
+    configurationError,
+} = storeToRefs(propertyStore);
 
 </script>
 
@@ -16,44 +22,57 @@ const { isOnline, isNetwork, post } = storeToRefs(propertyStore);
     <main>
         <banners-component />
         <div class="scan-qr">
-            <h1 class="title">Ваш терминал в телефоне,<br> сканируй QR-код!</h1>
+            <h1 class="title">Сканируй QR-код,<br> Ваш терминал в телефоне!</h1>
             <div class="scan-qr-items">
                 <div class="items">
                     <div>
                         <svg class="__svg">
                             <use xlink:href="#phone"></use>
                         </svg>
-                        <span>Весь сервис- в вашем телефоне</span>
+                        <span>Весь сервис — в вашем телефоне</span>
                     </div>
                     <div>
                         <svg class="__svg">
                             <use xlink:href="#history"></use>
                         </svg>
-                        <span>История и чеки</span>
+                        <span>История и чеки</span>
                     </div>
                     <div>
                         <svg class="__svg">
                             <use xlink:href="#loyalty"></use>
                         </svg>
-                        <span>Акции и система лояльности</span>
+                        <span>Акции и система лояльности</span>
                     </div>
                     <div>
                         <svg class="__svg">
                             <use xlink:href="#schedule"></use>
                         </svg>
-                        <span>Статус и режим работы</span>
+                        <span>Статус и режим работы</span>
                     </div>
                 </div>
                 <div class="qr">
-                    <img :src="VITE_QR_SRC" alt="">
+                    <img :src="VITE_QR_SRC" alt="QR-код мобильного сервиса">
                 </div>
             </div>
         </div>
-        <template v-if="post && isOnline && isNetwork">
+        <template v-if="post?.id && isOnline && isNetwork">
             <div class="post">
                 <div class="post-actions">
                     <div>
-                        <router-link to="/programs" class="__button">Начать</router-link>
+                        <router-link
+                            v-if="post.status === 'online'"
+                            to="/programs"
+                            class="__button"
+                        >
+                            Начать
+                        </router-link>
+                        <div v-else class="post-unavailable">
+                            {{
+                                post.status === 'busy'
+                                    ? 'Пост сейчас занят'
+                                    : 'Пост временно недоступен'
+                            }}
+                        </div>
                     </div>
                     <div>
                         <call-support-component />
@@ -89,7 +108,7 @@ const { isOnline, isNetwork, post } = storeToRefs(propertyStore);
                 </div>
             </div>
         </template>
-        <template v-else>
+        <template v-else-if="isInitialized && (!isOnline || !isNetwork)">
             <div class="backoff">
                 <div class="image">
                     <svg class="__svg" style="fill: #E8541E;">
@@ -101,6 +120,33 @@ const { isOnline, isNetwork, post } = storeToRefs(propertyStore);
                 </div>
             </div>
         </template>
+        <template v-else-if="isInitialized">
+            <div class="backoff">
+                <div class="image">
+                    <svg class="__svg" style="fill: #E8541E;">
+                        <use xlink:href="#offline"></use>
+                    </svg>
+                </div>
+                <div class="description">
+                    {{
+                        configurationError ||
+                        'Пост временно недоступен'
+                    }}
+                </div>
+            </div>
+        </template>
     </main>
 
 </template>
+
+<style scoped>
+.post-unavailable {
+    padding: 0.65rem;
+    border-radius: 0.65rem;
+    color: #9e3211;
+    background: #fff5f1;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-align: center;
+}
+</style>

@@ -11,12 +11,12 @@
 
         color: var(--primary-color);
         font-size: 1rem;
-        font-weight: 500;
+        font-weight: 600;
         text-align: center;
         line-height: 1.25rem;
 
         padding: 0.75rem 1rem;
-        border: 3px solid var(--primary-color);
+        border: 0.15rem solid var(--primary-color);
         border-radius: 0.75rem;
         min-width: 13rem;
 
@@ -52,10 +52,6 @@
         color: #ffffff;
         background-color: var(--green-color);
         border-color: var(--green-color);
-    }
-
-    .__button.--green:hover {
-        background-color: hsl(from var(--green-color) h s calc(l - 5));
     }
 
     .__svg {
