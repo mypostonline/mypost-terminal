@@ -37,6 +37,7 @@ const registerCashPaymentRoutes = (
 
             res.status(201).json({
                 ok: true,
+                acceptor: cashPayments.getStatus().acceptor,
                 session,
             });
         }
@@ -53,6 +54,7 @@ const registerCashPaymentRoutes = (
 
             res.json({
                 ok: true,
+                acceptor: cashPayments.getStatus().acceptor,
                 session,
             });
         }
@@ -75,6 +77,7 @@ const registerCashPaymentRoutes = (
             );
             res.json({
                 ok: true,
+                acceptor: cashPayments.getStatus().acceptor,
                 session,
             });
         }

@@ -5,6 +5,7 @@
   "main": "src/server.js",
   "scripts": {
     "smoke:bill-acceptor": "node scripts/bill-acceptor-smoke.mjs",
+    "start:mock": "node scripts/start-mock.js",
     "test": "node --test",
     "start": "node src/server.js"
   },

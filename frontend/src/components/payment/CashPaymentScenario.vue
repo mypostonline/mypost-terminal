@@ -28,6 +28,10 @@ const isStarting = ref(false);
 const isCanceling = ref(false);
 const cancelError = ref('');
 const isReadingBill = ref(false);
+const isMockMode = ref(false);
+const mockAmountsRub = ref([]);
+const isMockInserting = ref(false);
+const mockError = ref('');
 const approvedEmitted = ref(false);
 const changeCreditEmitted = ref(false);
 const failedEmitted = ref(false);
@@ -151,6 +155,46 @@ const applySession = (nextSession) => {
     }
 };
 
+const applyStatus = data => {
+    if (data?.acceptor) {
+        isMockMode.value = data.acceptor.testMode === true;
+        mockAmountsRub.value = Array.isArray(
+            data.acceptor.supportedAmountsRub
+        )
+            ? data.acceptor.supportedAmountsRub
+            : [];
+    }
+    applySession(data?.session);
+};
+
+const insertMockBill = async amountMinor => {
+    if (
+        !isMockMode.value ||
+        cashState.value !== 'accepting' ||
+        isMockInserting.value
+    ) {
+        return;
+    }
+
+    isMockInserting.value = true;
+    mockError.value = '';
+    try {
+        const data = await localApi('/api/cash/mock/insert', {
+            method: 'POST',
+            data: { amountMinor: Number(amountMinor) },
+        });
+        applyStatus(data);
+    }
+    catch (error) {
+        console.error('Failed to insert mock bill', error);
+        mockError.value = 'Не удалось внести тестовую купюру';
+        await refreshStatus();
+    }
+    finally {
+        isMockInserting.value = false;
+    }
+};
+
 const cancelPayment = async () => {
     if (!canCancel.value || !session.value?.id) {
         return;
@@ -166,7 +210,7 @@ const cancelPayment = async () => {
                 sessionId: session.value.id,
             },
         });
-        applySession(data.session);
+        applyStatus(data);
     }
     catch (error) {
         console.error('Failed to cancel cash payment', error);
@@ -193,7 +237,7 @@ const refreshStatus = async () => {
             sessionId: session.value.id,
         });
         const data = await localApi(`/api/cash/status?${query}`);
-        applySession(data.session);
+        applyStatus(data);
     }
     catch (error) {
         console.error('Failed to refresh cash payment status', error);
@@ -248,7 +292,7 @@ const connectSocket = () => {
                 applySession(message.payload?.session);
             }
             else if (message.channel === 'cash-payment-snapshot') {
-                applySession(message.payload?.session);
+                applyStatus(message.payload);
             }
             else if (
                 message.channel === 'bill-acceptor-pulse' &&
@@ -295,7 +339,7 @@ const startPayment = async () => {
                 amountMinor: targetAmountMinor.value,
             },
         });
-        applySession(data.session);
+        applyStatus(data);
 
         pollTimer = window.setInterval(refreshStatus, 2000);
     }
@@ -323,7 +367,7 @@ const resumePayment = async () => {
         ) {
             throw new Error('Cash payment session is missing');
         }
-        applySession(data.session);
+        applyStatus(data);
         pollTimer = window.setInterval(refreshStatus, 2_000);
     }
     catch (error) {
@@ -453,6 +497,38 @@ onBeforeUnmount(() => {
             Восстанавливаем связь с купюроприёмником…
         </div>
 
+        <div
+            v-if="isMockMode && cashState === 'accepting'"
+            class="cash-test-panel mt-6"
+        >
+            <strong>Тестовый режим оплаты наличными</strong>
+            <span>Добавьте виртуальную купюру</span>
+            <div class="cash-test-actions">
+                <button
+                    v-for="amountRub in mockAmountsRub"
+                    :key="amountRub"
+                    type="button"
+                    class="__button"
+                    :disabled="isMockInserting"
+                    @click="insertMockBill(amountRub * 100)"
+                >
+                    {{ amountRub }} ₽
+                </button>
+                <button
+                    v-if="remainingAmountMinor > 0"
+                    type="button"
+                    class="__button --green"
+                    :disabled="isMockInserting"
+                    @click="insertMockBill(remainingAmountMinor)"
+                >
+                    Внести остаток
+                </button>
+            </div>
+            <div v-if="mockError" class="cash-test-error">
+                {{ mockError }}
+            </div>
+        </div>
+
         <div v-if="showCancelAction" class="payment-cancel-actions mt-6">
             <button
                 type="button"
@@ -576,6 +652,33 @@ onBeforeUnmount(() => {
 
 .cash-no-change {
     color: #e8541e;
+}
+
+.cash-test-panel {
+    display: grid;
+    gap: 0.65rem;
+    padding: 1rem;
+    border: 0.12rem dashed var(--green-color);
+    border-radius: 0.85rem;
+    background: #f3fff4;
+    text-align: center;
+    font-size: 0.7rem;
+}
+
+.cash-test-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.cash-test-actions .__button {
+    min-width: 4.5rem;
+}
+
+.cash-test-error {
+    color: #b63d12;
+    font-weight: 600;
 }
 
 .payment-cancel-actions {

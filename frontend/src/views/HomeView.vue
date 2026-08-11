@@ -3,6 +3,7 @@ import { storeToRefs } from "pinia";
 import { usePropertyStore } from "@/stores/propertyStore.js";
 import BannersComponent from "@/components/BannersComponent.vue";
 import CallSupportComponent from "@/components/CallSupportComponent.vue";
+import { isPostAcceptingOrders } from "@/config/postAvailability.js";
 
 const VITE_QR_SRC = import.meta.env.VITE_QR_SRC;
 
@@ -60,18 +61,14 @@ const {
                 <div class="post-actions">
                     <div>
                         <router-link
-                            v-if="post.status === 'online'"
+                            v-if="isPostAcceptingOrders(post)"
                             to="/programs"
                             class="__button"
                         >
                             Начать
                         </router-link>
                         <div v-else class="post-unavailable">
-                            {{
-                                post.status === 'busy'
-                                    ? 'Пост сейчас занят'
-                                    : 'Пост временно недоступен'
-                            }}
+                            Пост временно недоступен
                         </div>
                     </div>
                     <div>

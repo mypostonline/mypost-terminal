@@ -167,7 +167,7 @@ test('requires operator attention when finalization outcome is unknown', async (
     assert.equal(session.approvedAmountMinor, 10_000);
 });
 
-test('rejects a payment when Vendotek is unavailable', () => {
+test('rejects a payment when the card terminal is unavailable', () => {
     const terminal = new FakeTerminal();
     terminal.state.connected = false;
     terminal.state.terminalState = 'disconnected';
@@ -178,7 +178,7 @@ test('rejects a payment when Vendotek is unavailable', () => {
             orderId: '45',
             amountMinor: 10_000,
         }),
-        error => error.code === 'vendotek_unavailable' &&
+        error => error.code === 'card_terminal_unavailable' &&
             error.statusCode === 503
     );
 });

@@ -52,6 +52,8 @@ class VtkClient extends EventEmitter {
     }) {
         super();
 
+        this.driver = 'vendotek';
+
         this.transport = transport || new VendotekTransport({
             host,
             port,

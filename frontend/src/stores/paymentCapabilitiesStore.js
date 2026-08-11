@@ -12,23 +12,25 @@ export const usePaymentCapabilitiesStore = defineStore(
         const error = ref('');
 
         const methods = computed(() => {
-            const vendotek = status.value?.vendotek;
+            const cardTerminal = status.value?.cardTerminal;
             const billAcceptor = status.value?.billAcceptor;
             const cashPayment = status.value?.cashPayment;
             const cashBusy = ACTIVE_CASH_STATES.has(cashPayment?.state);
 
             return {
                 card: {
-                    available: Boolean(vendotek?.available),
+                    available: Boolean(cardTerminal?.available),
+                    testMode: cardTerminal?.testMode === true,
                     unavailableLabel: !status.value
                         ? 'Проверяем терминал…'
-                        : vendotek?.enabled === false
+                        : cardTerminal?.enabled === false
                             ? 'Оплата картой отключена'
-                            : vendotek?.busy
+                            : cardTerminal?.busy
                                 ? 'Терминал занят'
                                 : 'Терминал карты недоступен',
                 },
                 cash: {
+                    testMode: billAcceptor?.testMode === true,
                     available: Boolean(
                         billAcceptor?.available &&
                         billAcceptor?.state === 'ready' &&
@@ -38,7 +40,7 @@ export const usePaymentCapabilitiesStore = defineStore(
                         ? 'Проверяем купюроприёмник…'
                         : cashBusy
                             ? 'Купюроприёмник занят'
-                            : billAcceptor?.mode === 'disabled'
+                            : billAcceptor?.enabled === false
                                 ? 'Оплата наличными отключена'
                                 : 'Купюроприёмник недоступен',
                 },

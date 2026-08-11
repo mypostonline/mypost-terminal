@@ -34,7 +34,7 @@ class CardPaymentService extends EventEmitter {
         super();
 
         if (!terminal) {
-            throw new Error('Vendotek terminal is required');
+            throw new Error('Card terminal is required');
         }
 
         this.terminal = terminal;
@@ -67,6 +67,8 @@ class CardPaymentService extends EventEmitter {
 
         return {
             enabled: this.enabled,
+            driver: this.terminal.driver || 'unknown',
+            testMode: this.terminal.driver === 'mock',
             available,
             connected: terminalState.connected,
             handshaked: terminalState.handshaked,
@@ -149,8 +151,8 @@ class CardPaymentService extends EventEmitter {
 
         const deviceStatus = this.getDeviceStatus();
         if (!deviceStatus.available) {
-            throw new CardPaymentError('Vendotek is not available', {
-                code: 'vendotek_unavailable',
+            throw new CardPaymentError('Card terminal is not available', {
+                code: 'card_terminal_unavailable',
                 statusCode: 503,
             });
         }

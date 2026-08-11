@@ -68,21 +68,24 @@ const createBackend = ({
     let stopPromise = null;
 
     const startDevices = async () => {
-        if (config.vendotek.enabled) {
+        if (config.cardTerminal.enabled) {
             try {
-                await services.vendotek.start();
-                logger.log(new Date().toISOString(), 'Vendotek ready');
+                await services.cardTerminal.start();
+                logger.log(
+                    new Date().toISOString(),
+                    `Card terminal driver=${config.cardTerminal.driver} ready`
+                );
             }
             catch (error) {
                 logger.error(
                     new Date().toISOString(),
-                    'Vendotek start failed:',
+                    'Card terminal start failed:',
                     error.message
                 );
             }
         }
         else {
-            logger.log(new Date().toISOString(), 'Vendotek disabled');
+            logger.log(new Date().toISOString(), 'Card terminal disabled');
         }
 
         try {
@@ -122,7 +125,7 @@ const createBackend = ({
         }
 
         stopPromise = (async () => {
-            services.vendotek.close();
+            services.cardTerminal.close();
             await services.billAcceptor.stop();
             unwireEvents();
             await realtime.close();

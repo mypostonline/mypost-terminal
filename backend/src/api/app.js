@@ -29,10 +29,17 @@ const createApp = ({
     app.use(express.json());
 
     registerStatusRoutes(app, services);
-    registerCardPaymentRoutes(app, services);
+    registerCardPaymentRoutes(app, {
+        ...services,
+        allowMockControl:
+            config.cardTerminal.enabled &&
+            config.cardTerminal.driver === 'mock',
+    });
     registerCashPaymentRoutes(app, {
         ...services,
-        allowMockInsert: config.billAcceptor.mode === 'mock',
+        allowMockInsert:
+            config.billAcceptor.enabled &&
+            config.billAcceptor.driver === 'mock',
     });
 
     app.use(express.static(staticDir));

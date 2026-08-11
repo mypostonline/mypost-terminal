@@ -1,7 +1,7 @@
 const { startBackend } = require('./bootstrap');
 
-const main = async () => {
-    const backend = await startBackend();
+const main = async options => {
+    const backend = await startBackend(options);
     let isShuttingDown = false;
 
     const shutdown = async signal => {
@@ -34,7 +34,7 @@ const main = async () => {
     return backend;
 };
 
-const run = () => main().catch(error => {
+const run = options => main(options).catch(error => {
     console.error(
         new Date().toISOString(),
         'Backend startup failed:',

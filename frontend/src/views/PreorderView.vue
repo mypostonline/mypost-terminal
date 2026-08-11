@@ -10,6 +10,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import CallSupportComponent from "@/components/CallSupportComponent.vue";
 import OfferLinkComponent from "@/components/OfferLinkComponent.vue";
 import { getConfiguredPaymentMethods } from "@/config/paymentMethods.js";
+import { isPostAcceptingOrders } from "@/config/postAvailability.js";
 
 const router = useRouter();
 
@@ -33,15 +34,13 @@ const paymentMethods = computed(() => getConfiguredPaymentMethods(
     post.value,
     runtimePaymentMethods.value
 ).map(method => {
-    if (post.value?.status === 'online') {
+    if (isPostAcceptingOrders(post.value)) {
         return method;
     }
     return {
         ...method,
         available: false,
-        unavailableLabel: post.value?.status === 'busy'
-            ? 'Пост сейчас занят'
-            : 'Пост временно недоступен',
+        unavailableLabel: 'Пост временно недоступен',
     };
 }));
 

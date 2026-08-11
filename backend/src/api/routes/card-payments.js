@@ -1,6 +1,9 @@
 const { sendServiceError } = require('./errors');
 
-const registerCardPaymentRoutes = (app, { cardPayments }) => {
+const registerCardPaymentRoutes = (
+    app,
+    { cardPayments, cardTerminal, allowMockControl = false }
+) => {
     const sendCardError = (res, error) => {
         sendServiceError(res, error, 'card_payment_error');
     };
@@ -45,6 +48,7 @@ const registerCardPaymentRoutes = (app, { cardPayments }) => {
                     : 200
             ).json({
                 ok: true,
+                device: cardPayments.getDeviceStatus(),
                 session,
             });
         }
@@ -64,6 +68,52 @@ const registerCardPaymentRoutes = (app, { cardPayments }) => {
                 ok: true,
                 session,
             });
+        }
+        catch (error) {
+            sendCardError(res, error);
+        }
+    });
+
+    const requireMockControl = res => {
+        if (allowMockControl) {
+            return true;
+        }
+
+        res.status(404).json({
+            ok: false,
+            error: 'not_found',
+        });
+        return false;
+    };
+
+    app.post('/api/card/mock/approve', async (req, res) => {
+        if (!requireMockControl(res)) {
+            return;
+        }
+
+        try {
+            cardTerminal.simulateApprove(
+                req.body.amountMinor === undefined
+                    ? undefined
+                    : Number(req.body.amountMinor)
+            );
+            const session = await cardPayments.waitForSettlement();
+            res.json({ ok: true, session });
+        }
+        catch (error) {
+            sendCardError(res, error);
+        }
+    });
+
+    app.post('/api/card/mock/decline', async (req, res) => {
+        if (!requireMockControl(res)) {
+            return;
+        }
+
+        try {
+            cardTerminal.simulateDecline('test_declined');
+            const session = await cardPayments.waitForSettlement();
+            res.json({ ok: true, session });
         }
         catch (error) {
             sendCardError(res, error);

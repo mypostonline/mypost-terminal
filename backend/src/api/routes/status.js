@@ -7,7 +7,7 @@ const registerStatusRoutes = (app, {
         res.json({
             ok: true,
             status: 'backend works',
-            vendotek: cardPayments.getDeviceStatus(),
+            cardTerminal: cardPayments.getDeviceStatus(),
             cardPayment: cardPayments.getSession(),
             billAcceptor: billAcceptor.getStatus(),
             cashPayment: cashPayments.getSession(),

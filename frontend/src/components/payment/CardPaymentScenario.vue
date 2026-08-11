@@ -30,6 +30,9 @@ const session = ref(null);
 const connectionState = ref('connecting');
 const isCanceling = ref(false);
 const cancelError = ref('');
+const isMockMode = ref(false);
+const isMockResolving = ref(false);
+const mockError = ref('');
 const approvedEmitted = ref(false);
 const failedEmitted = ref(false);
 const attentionEmitted = ref(false);
@@ -123,6 +126,41 @@ const applySession = nextSession => {
     }
 };
 
+const applyStatus = data => {
+    if (data?.device) {
+        isMockMode.value = data.device.testMode === true;
+    }
+    applySession(data?.session);
+};
+
+const resolveMockPayment = async decision => {
+    if (
+        !isMockMode.value ||
+        cardState.value !== 'processing' ||
+        isMockResolving.value
+    ) {
+        return;
+    }
+
+    isMockResolving.value = true;
+    mockError.value = '';
+    try {
+        const data = await localApi(`/api/card/mock/${decision}`, {
+            method: 'POST',
+            data: {},
+        });
+        applySession(data.session);
+    }
+    catch (error) {
+        console.error('Failed to resolve mock card payment', error);
+        mockError.value = 'Не удалось выполнить тестовую операцию';
+        await refreshStatus();
+    }
+    finally {
+        isMockResolving.value = false;
+    }
+};
+
 const cancelPayment = async () => {
     if (!canCancel.value) {
         return;
@@ -164,7 +202,7 @@ const refreshStatus = async () => {
             orderId: props.order.id,
         });
         const data = await localApi(`/api/card/status?${query}`);
-        applySession(data.session);
+        applyStatus(data);
     }
     catch (error) {
         if (error.status !== 404) {
@@ -210,7 +248,7 @@ const connectSocket = () => {
                 applySession(message.payload?.session);
             }
             else if (message.channel === 'card-payment-snapshot') {
-                applySession(message.payload?.session);
+                applyStatus(message.payload);
             }
         }
         catch (error) {
@@ -252,6 +290,9 @@ const startPayment = async () => {
                 productName: 'WASH',
             },
         });
+        if (data.device) {
+            isMockMode.value = data.device.testMode === true;
+        }
         applySession(data.session);
         pollTimer = window.setInterval(refreshStatus, 2_000);
     }
@@ -287,7 +328,7 @@ const resumePayment = async () => {
         if (!data.session) {
             throw new Error('Card payment session is missing');
         }
-        applySession(data.session);
+        applyStatus(data);
         pollTimer = window.setInterval(refreshStatus, 2_000);
     }
     catch (error) {
@@ -381,6 +422,35 @@ onBeforeUnmount(() => {
             Восстанавливаем связь с платёжным терминалом…
         </div>
 
+        <div
+            v-if="isMockMode && cardState === 'processing'"
+            class="payment-test-panel mt-6"
+        >
+            <strong>Тестовый режим оплаты картой</strong>
+            <span>Выберите результат операции</span>
+            <div class="payment-test-actions">
+                <button
+                    type="button"
+                    class="__button --green"
+                    :disabled="isMockResolving"
+                    @click="resolveMockPayment('approve')"
+                >
+                    Одобрить оплату
+                </button>
+                <button
+                    type="button"
+                    class="__button"
+                    :disabled="isMockResolving"
+                    @click="resolveMockPayment('decline')"
+                >
+                    Отклонить
+                </button>
+            </div>
+            <div v-if="mockError" class="payment-test-error">
+                {{ mockError }}
+            </div>
+        </div>
+
         <div v-if="showCancelAction" class="payment-cancel-actions mt-6">
             <button
                 type="button"
@@ -440,6 +510,28 @@ onBeforeUnmount(() => {
 .payment-connection {
     text-align: center;
     font-size: 0.65rem;
+    font-weight: 600;
+}
+
+.payment-test-panel {
+    display: grid;
+    gap: 0.65rem;
+    padding: 1rem;
+    border: 0.12rem dashed var(--green-color);
+    border-radius: 0.85rem;
+    background: #f3fff4;
+    text-align: center;
+    font-size: 0.7rem;
+}
+
+.payment-test-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+}
+
+.payment-test-error {
+    color: #b63d12;
     font-weight: 600;
 }
 

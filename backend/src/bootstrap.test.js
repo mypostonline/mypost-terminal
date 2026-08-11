@@ -66,8 +66,9 @@ test('starts the assembled backend and serves its status endpoint', async t => {
     const config = loadConfig({
         envFile: null,
         env: {
-            VENDETEK_ENABLED: 'false',
-            BILL_ACCEPTOR_MODE: 'mock',
+            CARD_TERMINAL_ENABLED: 'false',
+            BILL_ACCEPTOR_ENABLED: 'true',
+            BILL_ACCEPTOR_DRIVER: 'mock',
         },
     });
     config.server.port = 0;
@@ -80,7 +81,8 @@ test('starts the assembled backend and serves its status endpoint', async t => {
 
     assert.equal(response.status, 200);
     assert.equal(response.body.ok, true);
-    assert.equal(response.body.vendotek.enabled, false);
+    assert.equal(response.body.cardTerminal.enabled, false);
+    assert.equal(response.body.cardTerminal.driver, 'vendotek');
     assert.equal(response.body.billAcceptor.mode, 'mock');
 });
 
@@ -88,8 +90,9 @@ test('accepts several mock bills and returns a signed change QR', async t => {
     const config = loadConfig({
         envFile: null,
         env: {
-            VENDETEK_ENABLED: 'false',
-            BILL_ACCEPTOR_MODE: 'mock',
+            CARD_TERMINAL_ENABLED: 'false',
+            BILL_ACCEPTOR_ENABLED: 'true',
+            BILL_ACCEPTOR_DRIVER: 'mock',
             CASH_CHANGE_CREDIT_URL_TEMPLATE:
                 'https://app.example/change?token={token}',
             CASH_CHANGE_TOKEN_SECRET: 'integration-test-secret',
@@ -128,4 +131,51 @@ test('accepts several mock bills and returns a signed change QR', async t => {
     const payload = backend.services.cashChangeCredit.verifyToken(token);
     assert.equal(payload.orderId, 'order-with-change');
     assert.equal(payload.amountMinor, 3_000);
+});
+
+test('approves and declines card payments through the mock driver', async t => {
+    const config = loadConfig({
+        envFile: null,
+        env: {
+            CARD_TERMINAL_ENABLED: 'true',
+            CARD_TERMINAL_DRIVER: 'mock',
+            BILL_ACCEPTOR_ENABLED: 'false',
+        },
+    });
+    config.server.port = 0;
+
+    const backend = await startBackend({ config, logger: silentLogger });
+    t.after(() => backend.stop());
+    const { port } = backend.server.address();
+
+    const firstStart = await postJson({
+        port,
+        path: '/api/card/start',
+        data: { orderId: 'mock-card-approved', amountMinor: 12_000 },
+    });
+    assert.equal(firstStart.status, 202);
+    assert.equal(firstStart.body.device.testMode, true);
+
+    const approved = await postJson({
+        port,
+        path: '/api/card/mock/approve',
+        data: {},
+    });
+    assert.equal(approved.status, 200);
+    assert.equal(approved.body.session.state, 'completed');
+    assert.equal(approved.body.session.approvedAmountMinor, 12_000);
+
+    await postJson({
+        port,
+        path: '/api/card/start',
+        data: { orderId: 'mock-card-declined', amountMinor: 5_000 },
+    });
+    const declined = await postJson({
+        port,
+        path: '/api/card/mock/decline',
+        data: {},
+    });
+    assert.equal(declined.status, 200);
+    assert.equal(declined.body.session.state, 'declined');
+    assert.equal(declined.body.session.reason, 'test_declined');
 });

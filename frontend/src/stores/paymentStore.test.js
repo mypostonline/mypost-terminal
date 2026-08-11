@@ -30,20 +30,21 @@ describe('payment store', () => {
 
         store.markCompleted();
         expect(store.isNavigationLocked).toBe(false);
-        expect(localStorage.getItem('mypost.activePayment')).toBeNull();
     });
 
-    it('restores reconciliation after a reload', () => {
+    it('does not persist or restore reconciliation after a reload', () => {
         const firstStore = usePaymentStore();
         firstStore.prepare(order);
         firstStore.markApproved(500);
 
+        expect(localStorage.getItem('mypost.activePayment')).toBeNull();
+
         setActivePinia(createPinia());
         const restoredStore = usePaymentStore();
 
-        expect(restoredStore.phase).toBe('reconciling');
-        expect(restoredStore.paidAmount).toBe(500);
-        expect(restoredStore.isRecoverableOrder('42')).toBe(true);
+        expect(restoredStore.phase).toBe('idle');
+        expect(restoredStore.paidAmount).toBeNull();
+        expect(restoredStore.isRecoverableOrder('42')).toBe(false);
     });
 
     it('unlocks navigation only for a safe failure', () => {
@@ -55,7 +56,7 @@ describe('payment store', () => {
         expect(store.isNavigationLocked).toBe(false);
     });
 
-    it('persists a completed cash change claim for page reload', () => {
+    it('keeps a completed cash change claim only in memory', () => {
         const firstStore = usePaymentStore();
         firstStore.prepare(order);
         firstStore.setChangeCredit({
@@ -69,14 +70,14 @@ describe('payment store', () => {
 
         expect(firstStore.isNavigationLocked).toBe(false);
         expect(firstStore.hasPendingChangeCredit).toBe(true);
-        expect(localStorage.getItem('mypost.activePayment')).not.toBeNull();
+        expect(localStorage.getItem('mypost.activePayment')).toBeNull();
 
         setActivePinia(createPinia());
         const restoredStore = usePaymentStore();
 
-        expect(restoredStore.phase).toBe('completed');
-        expect(restoredStore.changeCredit.amountMinor).toBe(2_000);
-        expect(restoredStore.hasChangeCreditForOrder('42')).toBe(true);
+        expect(restoredStore.phase).toBe('idle');
+        expect(restoredStore.changeCredit).toBeNull();
+        expect(restoredStore.hasChangeCreditForOrder('42')).toBe(false);
     });
 
     it('clears change data when a different payment starts', () => {
@@ -92,5 +93,16 @@ describe('payment store', () => {
 
         expect(store.changeCredit).toBeNull();
         expect(store.paidAmount).toBeNull();
+    });
+
+    it('removes payment data saved by an older version', () => {
+        localStorage.setItem('mypost.activePayment', JSON.stringify({
+            phase: 'attention_required',
+            orderSnapshot: order,
+        }));
+
+        usePaymentStore();
+
+        expect(localStorage.getItem('mypost.activePayment')).toBeNull();
     });
 });

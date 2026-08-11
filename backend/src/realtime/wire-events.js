@@ -5,7 +5,7 @@ const wireEvents = ({
     logger = console,
 }) => {
     const {
-        vendotek,
+        cardTerminal,
         billAcceptor,
         cardPayments,
         cashPayments,
@@ -17,24 +17,24 @@ const wireEvents = ({
         subscriptions.push(() => emitter.off(eventName, handler));
     };
 
-    subscribe(vendotek, 'status', event => {
+    subscribe(cardTerminal, 'status', event => {
         if (debug) {
-            logger.log(new Date().toISOString(), '[Vendotek status]', event);
+            logger.log(new Date().toISOString(), '[Card terminal status]', event);
         }
-        broadcast({ channel: 'vendotek-status', payload: event });
+        broadcast({ channel: 'card-terminal-status', payload: event });
     });
 
-    subscribe(vendotek, 'raw', event => {
+    subscribe(cardTerminal, 'raw', event => {
         if (debug) {
-            logger.log(new Date().toISOString(), '[Vendotek raw]', event);
+            logger.log(new Date().toISOString(), '[Card terminal raw]', event);
         }
-        broadcast({ channel: 'vendotek-raw', payload: event });
+        broadcast({ channel: 'card-terminal-raw', payload: event });
     });
 
-    subscribe(vendotek, 'info', message => {
+    subscribe(cardTerminal, 'info', message => {
         if (typeof message.stageId === 'number') {
             broadcast({
-                channel: 'vendotek-stage',
+                channel: 'card-terminal-stage',
                 payload: {
                     stageId: message.stageId,
                     stageText: message.stageText,
@@ -43,10 +43,10 @@ const wireEvents = ({
         }
     });
 
-    subscribe(vendotek, 'error', error => {
-        logger.error(new Date().toISOString(), '[Vendotek error]', error);
+    subscribe(cardTerminal, 'error', error => {
+        logger.error(new Date().toISOString(), '[Card terminal error]', error);
         broadcast({
-            channel: 'vendotek-error',
+            channel: 'card-terminal-error',
             payload: { message: error.message },
         });
     });

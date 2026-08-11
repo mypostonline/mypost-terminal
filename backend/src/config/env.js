@@ -33,6 +33,30 @@ const readNumberList = (env, key, fallback) => {
     return [ ...new Set(numbers) ];
 };
 
+const readBoolean = (env, key, fallback) => {
+    const rawValue = env[key];
+    if (rawValue === undefined || rawValue === '') {
+        return Boolean(fallback);
+    }
+    if (rawValue === 'true') {
+        return true;
+    }
+    if (rawValue === 'false') {
+        return false;
+    }
+
+    throw new Error(`Invalid boolean environment variable ${key}`);
+};
+
+const readEnum = (env, key, fallback, allowedValues) => {
+    const value = String(env[key] || fallback).trim().toLowerCase();
+    if (!allowedValues.includes(value)) {
+        throw new Error(`Invalid environment variable ${key}`);
+    }
+
+    return value;
+};
+
 const loadConfig = ({
     env = process.env,
     envFile = DEFAULT_ENV_FILE,
@@ -41,14 +65,38 @@ const loadConfig = ({
         dotenv.config({ path: envFile, quiet: true });
     }
 
+    const billAcceptorEnabled = readBoolean(
+        env,
+        'BILL_ACCEPTOR_ENABLED',
+        false
+    );
+    const billAcceptorDriver = readEnum(
+        env,
+        'BILL_ACCEPTOR_DRIVER',
+        'gpio-pulse',
+        [ 'gpio-pulse', 'mock' ]
+    );
+
     return {
         server: {
             port: readNumber(env, 'PORT', 3001, { min: 1 }),
             corsOrigin: env.CORS_ORIGIN || 'http://localhost:5173',
         },
         debug: env.DEBUG === 'true',
+        cardTerminal: {
+            enabled: readBoolean(
+                env,
+                'CARD_TERMINAL_ENABLED',
+                true
+            ),
+            driver: readEnum(
+                env,
+                'CARD_TERMINAL_DRIVER',
+                'vendotek',
+                [ 'vendotek', 'mock' ]
+            ),
+        },
         vendotek: {
-            enabled: env.VENDETEK_ENABLED !== 'false',
             host: env.VTK_HOST || '192.168.1.1',
             port: readNumber(env, 'VTK_PORT', 62801, { min: 1 }),
             paymentWaitSec: readNumber(
@@ -59,7 +107,9 @@ const loadConfig = ({
             ),
         },
         billAcceptor: {
-            mode: env.BILL_ACCEPTOR_MODE || 'disabled',
+            enabled: billAcceptorEnabled,
+            driver: billAcceptorDriver,
+            mode: billAcceptorEnabled ? billAcceptorDriver : 'disabled',
             gpioChip: env.BILL_ACCEPTOR_GPIO_CHIP || 'gpiochip0',
             gpioLine: env.BILL_ACCEPTOR_GPIO_LINE || '17',
             rubPerPulse: readNumber(
@@ -118,6 +168,8 @@ const loadConfig = ({
 module.exports = {
     DEFAULT_ENV_FILE,
     loadConfig,
+    readBoolean,
+    readEnum,
     readNumber,
     readNumberList,
 };

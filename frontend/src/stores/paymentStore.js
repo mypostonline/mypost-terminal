@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
 
-const STORAGE_KEY = 'mypost.activePayment';
+const LEGACY_STORAGE_KEY = 'mypost.activePayment';
 const LOCKED_PHASES = new Set([
     'prepared',
     'processing',
@@ -9,20 +9,12 @@ const LOCKED_PHASES = new Set([
     'attention_required',
 ]);
 
-const readStoredPayment = () => {
+const clearLegacyStoredPayment = () => {
     try {
-        const stored = JSON.parse(
-            localStorage.getItem(STORAGE_KEY) || 'null'
-        );
-        if (stored && !stored.orderSnapshot?.id) {
-            localStorage.removeItem(STORAGE_KEY);
-            return null;
-        }
-        return stored;
+        localStorage.removeItem(LEGACY_STORAGE_KEY);
     }
     catch {
-        localStorage.removeItem(STORAGE_KEY);
-        return null;
+        // Browser storage can be unavailable in a restricted webview.
     }
 };
 
@@ -49,12 +41,13 @@ const sanitizeChangeCredit = claim => {
 };
 
 export const usePaymentStore = defineStore('paymentStore', () => {
-    const restored = readStoredPayment();
-    const phase = ref(restored?.phase || 'idle');
-    const orderSnapshot = ref(restored?.orderSnapshot || null);
-    const paidAmount = ref(restored?.paidAmount || null);
-    const error = ref(restored?.error || '');
-    const changeCredit = ref(sanitizeChangeCredit(restored?.changeCredit));
+    clearLegacyStoredPayment();
+
+    const phase = ref('idle');
+    const orderSnapshot = ref(null);
+    const paidAmount = ref(null);
+    const error = ref('');
+    const changeCredit = ref(null);
 
     const orderId = computed(() => orderSnapshot.value?.id);
     const isNavigationLocked = computed(() => LOCKED_PHASES.has(phase.value));
@@ -63,37 +56,12 @@ export const usePaymentStore = defineStore('paymentStore', () => {
         Number(changeCredit.value?.amountMinor) > 0
     ));
 
-    const persist = () => {
-        const shouldPersist = Boolean(
-            orderSnapshot.value?.id &&
-            (
-                LOCKED_PHASES.has(phase.value) ||
-                hasPendingChangeCredit.value
-            )
-        );
-
-        if (!shouldPersist) {
-            localStorage.removeItem(STORAGE_KEY);
-            return;
-        }
-
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({
-            phase: phase.value,
-            orderSnapshot: orderSnapshot.value,
-            paidAmount: paidAmount.value,
-            error: error.value,
-            changeCredit: changeCredit.value,
-            updatedAt: new Date().toISOString(),
-        }));
-    };
-
     const prepare = order => {
         orderSnapshot.value = sanitizeOrder(order);
         paidAmount.value = null;
         error.value = '';
         changeCredit.value = null;
         phase.value = 'prepared';
-        persist();
     };
 
     const markProcessing = order => {
@@ -108,43 +76,36 @@ export const usePaymentStore = defineStore('paymentStore', () => {
         }
         phase.value = 'processing';
         error.value = '';
-        persist();
     };
 
     const markApproved = amount => {
         paidAmount.value = Number(amount);
         phase.value = 'reconciling';
         error.value = '';
-        persist();
     };
 
     const setChangeCredit = claim => {
         changeCredit.value = sanitizeChangeCredit(claim);
-        persist();
     };
 
     const markReconciliationRequired = message => {
         phase.value = 'reconciling';
         error.value = message || '';
-        persist();
     };
 
     const markAttentionRequired = message => {
         phase.value = 'attention_required';
         error.value = message || '';
-        persist();
     };
 
     const markCompleted = () => {
         phase.value = 'completed';
         error.value = '';
-        persist();
     };
 
     const markFailed = message => {
         phase.value = 'failed';
         error.value = message || '';
-        persist();
     };
 
     const clear = () => {
@@ -153,7 +114,6 @@ export const usePaymentStore = defineStore('paymentStore', () => {
         paidAmount.value = null;
         error.value = '';
         changeCredit.value = null;
-        persist();
     };
 
     const matchesOrder = candidateOrderId => {

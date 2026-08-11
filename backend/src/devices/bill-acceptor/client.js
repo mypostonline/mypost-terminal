@@ -427,6 +427,10 @@ class BillAcceptorClient extends EventEmitter {
 
         return {
             mode: this.mode,
+            enabled: this.mode !== 'disabled',
+            driver: this.mode === 'disabled' ? null : this.mode,
+            testMode: this.mode === 'mock',
+            supportedAmountsRub: [ ...this.validAmountsRub ],
             state: this.state,
             available: baseAvailable && (
                 this.state === 'accepting' || this.pulses === 0

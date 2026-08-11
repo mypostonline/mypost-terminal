@@ -1,4 +1,5 @@
 const { VtkClient } = require('./devices/vendotek/client');
+const { MockCardTerminal } = require('./devices/card-terminal/mock-client');
 const { BillAcceptorClient } = require('./devices/bill-acceptor/client');
 const { CardPaymentService } = require('./payments/card/service');
 const { CashPaymentService } = require('./payments/cash/service');
@@ -7,13 +8,15 @@ const {
 } = require('./payments/cash/change-credit');
 
 const createServices = config => {
-    const vendotek = new VtkClient({
-        host: config.vendotek.host,
-        port: config.vendotek.port,
-        waitStaBeforeVrp: false,
-        paymentWaitSec: config.vendotek.paymentWaitSec,
-        debug: config.debug,
-    });
+    const cardTerminal = config.cardTerminal.driver === 'mock'
+        ? new MockCardTerminal({ debug: config.debug })
+        : new VtkClient({
+            host: config.vendotek.host,
+            port: config.vendotek.port,
+            waitStaBeforeVrp: false,
+            paymentWaitSec: config.vendotek.paymentWaitSec,
+            debug: config.debug,
+        });
 
     const billAcceptor = new BillAcceptorClient({
         mode: config.billAcceptor.mode,
@@ -29,8 +32,8 @@ const createServices = config => {
     });
 
     const cardPayments = new CardPaymentService({
-        terminal: vendotek,
-        enabled: config.vendotek.enabled,
+        terminal: cardTerminal,
+        enabled: config.cardTerminal.enabled,
         debug: config.debug,
     });
 
@@ -48,7 +51,7 @@ const createServices = config => {
     });
 
     return {
-        vendotek,
+        cardTerminal,
         billAcceptor,
         cashChangeCredit,
         cardPayments,
