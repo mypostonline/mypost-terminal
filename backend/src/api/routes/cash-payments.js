@@ -33,6 +33,8 @@ const registerCashPaymentRoutes = (
             const session = await cashPayments.start({
                 orderId: req.body.orderId,
                 amountMinor: Number(req.body.amountMinor),
+                productId: req.body.productId,
+                productName: req.body.productName,
             });
 
             res.status(201).json({
@@ -49,6 +51,75 @@ const registerCashPaymentRoutes = (
     app.post('/api/cash/cancel', async (req, res) => {
         try {
             const session = await cashPayments.cancel({
+                sessionId: req.body.sessionId,
+            });
+
+            res.json({
+                ok: true,
+                acceptor: cashPayments.getStatus().acceptor,
+                session,
+            });
+        }
+        catch (error) {
+            sendCashError(res, error);
+        }
+    });
+
+    app.post('/api/cash/resume', async (req, res) => {
+        try {
+            const session = await cashPayments.resume({
+                sessionId: req.body.sessionId,
+            });
+
+            res.json({
+                ok: true,
+                acceptor: cashPayments.getStatus().acceptor,
+                session,
+            });
+        }
+        catch (error) {
+            sendCashError(res, error);
+        }
+    });
+
+    app.post('/api/cash/balance-credit/request', (req, res) => {
+        try {
+            const session = cashPayments.requestBalanceCredit({
+                sessionId: req.body.sessionId,
+            });
+
+            res.json({
+                ok: true,
+                acceptor: cashPayments.getStatus().acceptor,
+                session,
+            });
+        }
+        catch (error) {
+            sendCashError(res, error);
+        }
+    });
+
+    app.post('/api/cash/balance-credit/confirm', (req, res) => {
+        try {
+            const session = cashPayments.confirmBalanceCredit({
+                sessionId: req.body.sessionId,
+                creditUrl: req.body.creditUrl,
+            });
+
+            res.json({
+                ok: true,
+                acceptor: cashPayments.getStatus().acceptor,
+                session,
+            });
+        }
+        catch (error) {
+            sendCashError(res, error);
+        }
+    });
+
+    app.post('/api/cash/release', (req, res) => {
+        try {
+            const session = cashPayments.release({
                 sessionId: req.body.sessionId,
             });
 

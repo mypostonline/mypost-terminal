@@ -2,7 +2,13 @@ import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
 import localApi from '@/functions/localApi.js';
 
-const ACTIVE_CASH_STATES = new Set([ 'preparing', 'accepting' ]);
+const ACTIVE_CASH_STATES = new Set([
+    'preparing',
+    'accepting',
+    'fiscalizing',
+    'partial_payment',
+    'balance_credit_required',
+]);
 
 export const usePaymentCapabilitiesStore = defineStore(
     'paymentCapabilities',
@@ -15,7 +21,14 @@ export const usePaymentCapabilitiesStore = defineStore(
             const cardTerminal = status.value?.cardTerminal;
             const billAcceptor = status.value?.billAcceptor;
             const cashPayment = status.value?.cashPayment;
-            const cashBusy = ACTIVE_CASH_STATES.has(cashPayment?.state);
+            const cashFiscalization = status.value?.cashFiscalization;
+            const cashBusy = ACTIVE_CASH_STATES.has(cashPayment?.state) || (
+                cashPayment?.state === 'attention_required' &&
+                Number(cashPayment?.acceptedAmountMinor || 0) > 0
+            );
+            const cashFiscalizationReady =
+                cashFiscalization?.enabled !== true ||
+                cashFiscalization?.available === true;
 
             return {
                 card: {
@@ -34,12 +47,15 @@ export const usePaymentCapabilitiesStore = defineStore(
                     available: Boolean(
                         billAcceptor?.available &&
                         billAcceptor?.state === 'ready' &&
+                        cashFiscalizationReady &&
                         !cashBusy
                     ),
                     unavailableLabel: !status.value
                         ? 'Проверяем купюроприёмник…'
                         : cashBusy
                             ? 'Купюроприёмник занят'
+                            : !cashFiscalizationReady
+                                ? 'Касса Vendotek недоступна'
                             : billAcceptor?.enabled === false
                                 ? 'Оплата наличными отключена'
                                 : 'Купюроприёмник недоступен',

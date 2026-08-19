@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
+    createCashSaleIdl,
     createFin,
     createIdl,
     createVrp,
@@ -23,6 +24,39 @@ test('creates IDL with operation and event numbers', () => {
         operationNumber: '7',
         eventNumber: '3',
     });
+});
+
+test('creates a cash sale IDL for fiscalization', () => {
+    const command = createCashSaleIdl({
+        operationNumber: 7,
+        eventNumber: 4,
+        amountMinor: 10_000,
+        productId: 12,
+        productName: 'WASH',
+    });
+
+    assert.deepEqual(decodeCommand(command), {
+        messageName: 'IDL',
+        operationNumber: '7',
+        amount: '10000',
+        eventName: 'CSAPP',
+        eventNumber: '4',
+        productId: '12',
+        productName: 'WASH',
+    });
+});
+
+test('rejects an invalid cash sale product code', () => {
+    assert.throws(
+        () => createCashSaleIdl({
+            operationNumber: 7,
+            eventNumber: 4,
+            amountMinor: 10_000,
+            productId: 'product-12',
+            productName: 'WASH',
+        }),
+        /productId/
+    );
 });
 
 test('creates VRP with product metadata', () => {

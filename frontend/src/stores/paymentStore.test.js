@@ -56,45 +56,6 @@ describe('payment store', () => {
         expect(store.isNavigationLocked).toBe(false);
     });
 
-    it('keeps a completed cash change claim only in memory', () => {
-        const firstStore = usePaymentStore();
-        firstStore.prepare(order);
-        firstStore.setChangeCredit({
-            status: 'pending',
-            amountMinor: 2_000,
-            qrPayload: 'https://app.example/change?token=signed',
-            expiresAt: '2026-08-11T10:00:00.000Z',
-        });
-        firstStore.markApproved(520);
-        firstStore.markCompleted();
-
-        expect(firstStore.isNavigationLocked).toBe(false);
-        expect(firstStore.hasPendingChangeCredit).toBe(true);
-        expect(localStorage.getItem('mypost.activePayment')).toBeNull();
-
-        setActivePinia(createPinia());
-        const restoredStore = usePaymentStore();
-
-        expect(restoredStore.phase).toBe('idle');
-        expect(restoredStore.changeCredit).toBeNull();
-        expect(restoredStore.hasChangeCreditForOrder('42')).toBe(false);
-    });
-
-    it('clears change data when a different payment starts', () => {
-        const store = usePaymentStore();
-        store.prepare(order);
-        store.setChangeCredit({
-            amountMinor: 2_000,
-            qrPayload: 'https://app.example/change?token=signed',
-        });
-        store.markCompleted();
-
-        store.markProcessing({ ...order, id: 43 });
-
-        expect(store.changeCredit).toBeNull();
-        expect(store.paidAmount).toBeNull();
-    });
-
     it('removes payment data saved by an older version', () => {
         localStorage.setItem('mypost.activePayment', JSON.stringify({
             phase: 'attention_required',

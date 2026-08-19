@@ -68,24 +68,46 @@ const createBackend = ({
     let stopPromise = null;
 
     const startDevices = async () => {
-        if (config.cardTerminal.enabled) {
+        const vendotekRequired =
+            config.cardTerminal.enabled ||
+            config.cashPayment.fiscalizationEnabled;
+
+        if (vendotekRequired) {
             try {
                 await services.cardTerminal.start();
                 logger.log(
                     new Date().toISOString(),
-                    `Card terminal driver=${config.cardTerminal.driver} ready`
+                    `Vendotek driver=${config.cardTerminal.driver} ready`
                 );
             }
             catch (error) {
                 logger.error(
                     new Date().toISOString(),
-                    'Card terminal start failed:',
+                    'Vendotek start failed:',
                     error.message
                 );
             }
         }
         else {
-            logger.log(new Date().toISOString(), 'Card terminal disabled');
+            logger.log(
+                new Date().toISOString(),
+                'Vendotek integrations disabled'
+            );
+        }
+
+        try {
+            const relayStatus = await services.billAcceptorRelay.start();
+            logger.log(
+                new Date().toISOString(),
+                `Bill acceptor relay state=${relayStatus.state}`
+            );
+        }
+        catch (error) {
+            logger.error(
+                new Date().toISOString(),
+                'Bill acceptor relay start failed:',
+                error.message
+            );
         }
 
         try {
@@ -127,6 +149,7 @@ const createBackend = ({
         stopPromise = (async () => {
             services.cardTerminal.close();
             await services.billAcceptor.stop();
+            await services.billAcceptorRelay.close();
             unwireEvents();
             await realtime.close();
             await closeHttpServer(server);

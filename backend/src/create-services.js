@@ -1,6 +1,9 @@
 const { VtkClient } = require('./devices/vendotek/client');
 const { MockCardTerminal } = require('./devices/card-terminal/mock-client');
 const { BillAcceptorClient } = require('./devices/bill-acceptor/client');
+const {
+    HttpRelayGate,
+} = require('./devices/bill-acceptor/http-relay-gate');
 const { CardPaymentService } = require('./payments/card/service');
 const { CashPaymentService } = require('./payments/cash/service');
 const {
@@ -18,6 +21,17 @@ const createServices = config => {
             debug: config.debug,
         });
 
+    const billAcceptorRelay = new HttpRelayGate({
+        enabled: config.billAcceptor.relay.enabled,
+        url: config.billAcceptor.relay.url,
+        leaseMs: config.billAcceptor.relay.leaseMs,
+        renewIntervalMs:
+            config.billAcceptor.relay.renewIntervalMs,
+        requestTimeoutMs:
+            config.billAcceptor.relay.requestTimeoutMs,
+        debug: config.debug,
+    });
+
     const billAcceptor = new BillAcceptorClient({
         mode: config.billAcceptor.mode,
         gpioChip: config.billAcceptor.gpioChip,
@@ -28,6 +42,7 @@ const createServices = config => {
         maxPacketTimeMs: config.billAcceptor.maxPacketTimeMs,
         validAmountsRub: config.billAcceptor.validAmountsRub,
         gpiomonCommand: config.billAcceptor.gpiomonCommand,
+        acceptanceGate: billAcceptorRelay,
         debug: config.debug,
     });
 
@@ -45,14 +60,22 @@ const createServices = config => {
 
     const cashPayments = new CashPaymentService({
         acceptor: billAcceptor,
-        sessionTimeoutSec: config.cashPayment.timeoutSec,
+        billTimeoutSec: config.cashPayment.billTimeoutSec,
+        partialDecisionTimeoutSec:
+            config.cashPayment.partialDecisionTimeoutSec,
         changeCreditService: cashChangeCredit,
+        fiscalizer: cardTerminal,
+        fiscalizationEnabled:
+            config.cashPayment.fiscalizationEnabled,
+        fiscalProductId: config.cashPayment.fiscalProductId,
+        fiscalProductName: config.cashPayment.fiscalProductName,
         debug: config.debug,
     });
 
     return {
         cardTerminal,
         billAcceptor,
+        billAcceptorRelay,
         cashChangeCredit,
         cardPayments,
         cashPayments,

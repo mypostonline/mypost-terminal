@@ -35,11 +35,7 @@ router.beforeEach((to, from) => {
         const canRecoverPayment =
             to.name === 'order' &&
             paymentStore.isRecoverableOrder(to.params.orderId);
-        const canShowChangeCredit =
-            to.name === 'order' &&
-            paymentStore.hasChangeCreditForOrder(to.params.orderId);
-
-        if (!canRecoverPayment && !canShowChangeCredit) {
+        if (!canRecoverPayment) {
             return { name: 'home' };
         }
     }

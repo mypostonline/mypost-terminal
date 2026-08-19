@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { EventEmitter } = require('events');
 const { VtkClient } = require('./client');
+const { decodeTlvs, tlvsToObject } = require('./protocol');
 
 class FakeSocket extends EventEmitter {
     constructor() {
@@ -66,6 +67,7 @@ const buildPosResponse = ({
     messageName,
     operationNumber,
     amount,
+    eventNumber,
 }) => {
     const tlvs = [
         [ 0x01, messageName ],
@@ -73,6 +75,9 @@ const buildPosResponse = ({
     ];
     if (amount !== undefined) {
         tlvs.push([ 0x04, String(amount) ]);
+    }
+    if (eventNumber !== undefined) {
+        tlvs.push([ 0x08, String(eventNumber) ]);
     }
 
     const appMessage = Buffer.concat(tlvs.map(([ tag, value ]) => {
@@ -235,6 +240,86 @@ test('rejects invalid payment input without breaking the connection', async () =
     assert.equal(client.operationActive, false);
     assert.equal(client.paymentInProgress, false);
     assert.equal(client.currentOperation, null);
+});
+
+test('registers a cash sale with the next event number', async () => {
+    const { client } = createClient();
+    client.connected = true;
+    client.handshaked = true;
+    client.terminalState = 'idle';
+    client.operationNumber = 7;
+    client.eventNumber = 3;
+
+    let outbound = null;
+    client.sendCommand = command => {
+        outbound = tlvsToObject(
+            decodeTlvs(Buffer.concat(command.tlvs))
+        );
+        setImmediate(() => client.emit('message', {
+            messageName: 'IDL',
+            operationNumber: '7',
+            eventNumber: '4',
+        }));
+    };
+
+    const result = await client.registerCashSale({
+        amountMinor: 10_000,
+        productId: 12,
+        productName: 'WASH',
+    });
+
+    assert.deepEqual(outbound, {
+        messageName: 'IDL',
+        operationNumber: '7',
+        amount: '10000',
+        eventName: 'CSAPP',
+        eventNumber: '4',
+        productId: '12',
+        productName: 'WASH',
+    });
+    assert.equal(result.eventNumber, 4);
+    assert.equal(client.eventNumber, 4);
+    assert.equal(client.terminalState, 'idle');
+    assert.equal(client.cashSaleInProgress, false);
+    assert.equal(client.listenerCount('message'), 0);
+});
+
+test('does not automatically retry an unconfirmed cash sale', async () => {
+    const { client } = createClient();
+    const socket = new FakeSocket();
+    let sent = 0;
+    client.socket = socket;
+    client.connected = true;
+    client.handshaked = true;
+    client.terminalState = 'idle';
+    client.sendCommand = () => {
+        sent += 1;
+    };
+    client.waitForMessage = async (
+        predicate,
+        timeoutMs,
+        description,
+        send
+    ) => {
+        send();
+        throw new Error('timeout');
+    };
+
+    await assert.rejects(
+        client.registerCashSale({
+            amountMinor: 5_000,
+            productId: 1,
+            productName: 'WASH',
+        }),
+        error => (
+            error.code === 'cash_fiscalization_outcome_unknown' &&
+            error.outcomeUnknown === true
+        )
+    );
+
+    assert.equal(sent, 1);
+    assert.equal(socket.destroyed, true);
+    assert.equal(client.cashSaleInProgress, false);
 });
 
 test('installs the FIN response waiter before sending finalization', async () => {

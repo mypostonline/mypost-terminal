@@ -143,12 +143,54 @@ const loadConfig = ({
             ),
             gpiomonCommand:
                 env.BILL_ACCEPTOR_GPIOMON_COMMAND || 'gpiomon',
+            relay: {
+                enabled: readBoolean(
+                    env,
+                    'BILL_ACCEPTOR_RELAY_ENABLED',
+                    false
+                ),
+                url: env.BILL_ACCEPTOR_RELAY_URL ||
+                    'http://127.0.0.1:3181/bill-acceptor/relay',
+                leaseMs: readNumber(
+                    env,
+                    'BILL_ACCEPTOR_RELAY_LEASE_MS',
+                    15_000,
+                    { min: 1 }
+                ),
+                renewIntervalMs: readNumber(
+                    env,
+                    'BILL_ACCEPTOR_RELAY_RENEW_INTERVAL_MS',
+                    5_000,
+                    { min: 1 }
+                ),
+                requestTimeoutMs: readNumber(
+                    env,
+                    'BILL_ACCEPTOR_RELAY_REQUEST_TIMEOUT_MS',
+                    3_000,
+                    { min: 1 }
+                ),
+            },
         },
         cashPayment: {
-            timeoutSec: readNumber(
+            fiscalizationEnabled: readBoolean(
                 env,
-                'CASH_PAYMENT_TIMEOUT_SEC',
-                300,
+                'CASH_FISCALIZATION_ENABLED',
+                false
+            ),
+            fiscalProductId:
+                env.CASH_FISCALIZATION_PRODUCT_ID || '1',
+            fiscalProductName:
+                env.CASH_FISCALIZATION_PRODUCT_NAME || 'WASH',
+            billTimeoutSec: readNumber(
+                env,
+                'CASH_PAYMENT_BILL_TIMEOUT_SEC',
+                120,
+                { min: 1 }
+            ),
+            partialDecisionTimeoutSec: readNumber(
+                env,
+                'CASH_PAYMENT_PARTIAL_DECISION_TIMEOUT_SEC',
+                600,
                 { min: 1 }
             ),
             changeCreditUrlTemplate:

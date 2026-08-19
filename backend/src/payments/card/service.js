@@ -63,6 +63,7 @@ class CardPaymentService extends EventEmitter {
             terminalState.terminalState === 'idle' &&
             !terminalState.operationActive &&
             !terminalState.paymentInProgress &&
+            !terminalState.cashSaleInProgress &&
             !sessionActive;
 
         return {
@@ -77,7 +78,8 @@ class CardPaymentService extends EventEmitter {
                 : 'disabled',
             busy: sessionActive ||
                 terminalState.operationActive ||
-                terminalState.paymentInProgress,
+                terminalState.paymentInProgress ||
+                terminalState.cashSaleInProgress,
         };
     }
 

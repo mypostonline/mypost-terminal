@@ -1,9 +1,21 @@
 <script setup>
+import {
+    computed,
+    onBeforeUnmount,
+    onMounted,
+    ref,
+    watch,
+} from "vue";
 import { storeToRefs } from "pinia";
 import { usePropertyStore } from "@/stores/propertyStore.js";
 import BannersComponent from "@/components/BannersComponent.vue";
 import CallSupportComponent from "@/components/CallSupportComponent.vue";
 import { isPostAcceptingOrders } from "@/config/postAvailability.js";
+import {
+    formatRemainingMinutes,
+    getRemainingMs,
+    tickRemainingMs,
+} from "@/functions/postTimer.js";
 
 const VITE_QR_SRC = import.meta.env.VITE_QR_SRC;
 
@@ -15,6 +27,37 @@ const {
     post,
     configurationError,
 } = storeToRefs(propertyStore);
+
+const remainingMs = ref(0);
+const remainingTimeLabel = computed(() => {
+    return formatRemainingMinutes(remainingMs.value);
+});
+let postTimer = null;
+
+watch(
+    () => [
+        post.value?.status,
+        post.value?.time_left,
+    ],
+    ([ status, timeLeft ]) => {
+        remainingMs.value = status === 'busy'
+            ? getRemainingMs(timeLeft)
+            : 0;
+    },
+    { immediate: true }
+);
+
+onMounted(() => {
+    postTimer = window.setInterval(() => {
+        remainingMs.value = tickRemainingMs(remainingMs.value);
+    }, 1_000);
+});
+
+onBeforeUnmount(() => {
+    if (postTimer) {
+        window.clearInterval(postTimer);
+    }
+});
 
 </script>
 
@@ -89,9 +132,13 @@ const {
                             <svg class="__svg shape" style="fill: #FFBB00;">
                                 <use xlink:href="#shape"></use>
                             </svg>
-                            <!--
-                            <div class="post-timer">99 мин</div>
-                            -->
+                            <div
+                                v-if="remainingTimeLabel"
+                                class="post-timer"
+                                aria-live="polite"
+                            >
+                                {{ remainingTimeLabel }}
+                            </div>
                         </template>
                         <template v-else-if="post.status === 'offline'">
                             <svg class="__svg shape" style="fill: #E8541E;">

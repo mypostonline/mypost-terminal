@@ -11,6 +11,7 @@ import { useOrderStore } from "@/stores/orderStore.js";
 import { usePaymentStore } from "@/stores/paymentStore.js";
 import { usePropertyStore } from "@/stores/propertyStore.js";
 import { getPaymentMethodCode } from "@/config/paymentMethods.js";
+import { getOrderUrl } from "@/functions/orderUrl.js";
 import {
     CLOSED_ORDER_STATUSES,
     PAID_ORDER_STATUSES,
@@ -19,9 +20,9 @@ import {
 } from "@/config/orderStatuses.js";
 import CallSupportComponent from "@/components/CallSupportComponent.vue";
 import OfferLinkComponent from "@/components/OfferLinkComponent.vue";
+import OrderQrCode from "@/components/order/OrderQrCode.vue";
 import CardPaymentScenario from "@/components/payment/CardPaymentScenario.vue";
 import CashPaymentScenario from "@/components/payment/CashPaymentScenario.vue";
-import CashChangeCreditQr from "@/components/payment/CashChangeCreditQr.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -37,7 +38,6 @@ const {
     phase: storedPaymentPhase,
     paidAmount: storedPaidAmount,
     orderSnapshot,
-    changeCredit,
 } = storeToRefs(paymentStore);
 
 const isInitialized = ref(false);
@@ -68,7 +68,18 @@ const paymentScenario = computed(() => {
 });
 
 const isCardPayment = computed(() => paymentMethodCode.value === 'card');
-const isCashPayment = computed(() => paymentMethodCode.value === 'cash');
+const orderQrUrl = computed(() => getOrderUrl(order.value?.id));
+const showOrderQr = computed(() => (
+    [
+        'reconciling',
+        'attention',
+        'cash_session_completed',
+        'paid',
+        'failed',
+        'unsupported',
+        'closed',
+    ].includes(paymentState.value) && Boolean(orderQrUrl.value)
+));
 const canRetryPayment = computed(() => {
     return [ 'failed', 'unsupported', 'closed' ].includes(
         paymentState.value
@@ -186,8 +197,10 @@ const handlePaymentApproved = async paidAmount => {
     await synchronizePaidOrder();
 };
 
-const handleChangeCredit = claim => {
-    paymentStore.setChangeCredit(claim);
+const handleBalanceCreditReady = () => {
+    paymentStore.markCompleted();
+    paymentError.value = '';
+    paymentState.value = 'cash_session_completed';
 };
 
 const continueRecoverablePayment = async () => {
@@ -339,7 +352,7 @@ onBeforeUnmount(() => {
             :order="order"
             :resume-only="resumeExistingDeviceSession"
             @approved="handlePaymentApproved"
-            @change-credit="handleChangeCredit"
+            @balance-credit-ready="handleBalanceCreditReady"
             @failed="setPaymentFailed"
             @attention="handlePaymentAttention"
             @canceled="handlePaymentCanceled"
@@ -374,6 +387,33 @@ onBeforeUnmount(() => {
             </div>
         </template>
 
+        <template v-else-if="paymentState === 'cash_session_completed'">
+            <div class="text-center">
+                <svg class="__svg payment-result-icon">
+                    <use xlink:href="#clock-ok"></use>
+                </svg>
+                <h2 class="mt-4">Сессия оплаты завершена</h2>
+                <h3 class="mt-4">
+                    Отсканируйте QR-код заказа для зачисления<br>
+                    внесённой суммы на баланс и просмотра чека
+                </h3>
+            </div>
+            <order-qr-code
+                v-if="showOrderQr"
+                :order-id="order.id"
+                :order-url="orderQrUrl"
+            />
+            <div class="mt-16 text-center">
+                <router-link
+                    to="/"
+                    class="__button --green"
+                    @click="paymentStore.clear"
+                >
+                    На главную
+                </router-link>
+            </div>
+        </template>
+
         <template v-else-if="paymentState === 'paid'">
             <div class="text-center">
                 <svg class="__svg payment-result-icon">
@@ -385,9 +425,10 @@ onBeforeUnmount(() => {
                     нашего сервиса
                 </h3>
             </div>
-            <cash-change-credit-qr
-                v-if="isCashPayment && changeCredit?.amountMinor > 0"
-                :change-credit="changeCredit"
+            <order-qr-code
+                v-if="showOrderQr"
+                :order-id="order.id"
+                :order-url="orderQrUrl"
             />
             <div class="mt-16 text-center">
                 <router-link
@@ -420,6 +461,12 @@ onBeforeUnmount(() => {
                 </div>
             </div>
 
+            <order-qr-code
+                v-if="showOrderQr"
+                :order-id="order.id"
+                :order-url="orderQrUrl"
+            />
+
             <div
                 class="payment-result-actions mt-16"
                 :class="{ '--single': !canRetryPayment }"
@@ -427,6 +474,8 @@ onBeforeUnmount(() => {
                 <router-link to="/" class="__button --green">
                     На главную
                 </router-link>
+
+                <!--
                 <router-link
                     v-if="canRetryPayment"
                     :to="`/programs/${order.program_id}`"
@@ -434,13 +483,29 @@ onBeforeUnmount(() => {
                 >
                     Выбрать оплату заново
                 </router-link>
+                -->
+                <call-support-component />
             </div>
         </template>
 
+        <order-qr-code
+            v-if="
+                showOrderQr &&
+                !canRetryPayment &&
+                ![ 'cash_session_completed', 'paid' ].includes(paymentState)
+            "
+            :order-id="order.id"
+            :order-url="orderQrUrl"
+        />
+
+        <!--
         <div class="mt-6 text-center">
             <call-support-component />
         </div>
-        <div class="mt-4 text-center">
+        -->
+
+
+        <div class="mt-4 text-center" style="font-size: 0.75rem; font-weight: 500; margin-top: 1rem;">
             <input type="checkbox" checked disabled>
             Заплатив здесь, вы принимаете условия сервиса<template
                 v-if="isCardPayment"

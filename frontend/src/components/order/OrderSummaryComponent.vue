@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from "vue";
 import { getPrice } from "@/functions/helpers.js";
+import { calculateCashbackAmount } from "@/functions/cashback.js";
 
 const props = defineProps({
     order: {
@@ -15,6 +16,23 @@ const program = computed(() => {
 
 const addons = computed(() => {
     return props.order?.items?.filter(item => item.addon_id) || [];
+});
+
+const cashbackAmount = computed(() => {
+    const accruedAmount = Number(props.order?.cashback_amount);
+    if (Number.isFinite(accruedAmount) && accruedAmount > 0) {
+        return accruedAmount;
+    }
+
+    return calculateCashbackAmount(
+        props.order?.total_amount,
+        props.order?.cashback_percent
+    );
+});
+
+const hasCashback = computed(() => {
+    return Number(props.order?.cashback_percent) > 0 ||
+        cashbackAmount.value > 0;
 });
 </script>
 
@@ -43,11 +61,17 @@ const addons = computed(() => {
                 <span>{{ getPrice(order.total_amount) }}</span>
             </div>
         </div>
-        <div class="footer">
+        <div v-if="hasCashback" class="footer">
             <div class="item">
-                <span>Зачислено бонусов*</span>
-                <span>{{ getPrice(0) }}</span>
+                <span>Начислено бонусов*</span>
+                <span>{{ getPrice(cashbackAmount) }}</span>
             </div>
         </div>
+    </div>
+    <div
+        v-if="hasCashback"
+        style="font-size: 0.75rem; font-weight: 500; margin-top: 1rem;"
+    >
+        *Для зачисления бонусов, сканируй QR-код после оплаты заказа
     </div>
 </template>

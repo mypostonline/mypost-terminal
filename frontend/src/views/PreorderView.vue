@@ -185,15 +185,18 @@ onBeforeUnmount(() => {
                     <span>{{ getPrice(order.total_amount) }}</span>
                 </div>
             </div>
-            <div class="footer">
+            <div v-if="order.cashback_percent > 0" class="footer">
                 <div class="item">
-                    <span>Зачислено бонусов*</span>
-                    <span>{{ getPrice(0) }}</span>
+                    <span>Начислено бонусов*</span>
+                    <span>{{ getPrice(order.cashback_amount) }}</span>
                 </div>
             </div>
         </div>
-        <div style="font-size: 0.75rem; font-weight: 500; margin-top: 1rem;">
-            *Для операций с бонусами оплачивайте через сервис
+        <div
+            v-if="order.cashback_percent > 0"
+            style="font-size: 0.75rem; font-weight: 500; margin-top: 1rem;"
+        >
+            *Для зачисления бонусов, сканируй QR-код после оплаты заказа
         </div>
         <section class="payment-choice mt-6">
             <h2 class="payment-choice-title">Выберите способ оплаты</h2>
@@ -251,27 +254,41 @@ onBeforeUnmount(() => {
             </div>
         </section>
 
-        <div class="preorder-navigation">
-            <router-link
-                :to="`/programs/${program.id}`"
-                class="__button --small"
-            >
-                <svg class="__svg" style="fill: var(--primary-color); transform: rotate(180deg);">
-                    <use xlink:href="#arrow"></use>
-                </svg>
-            </router-link>
+        <!--<div class="preorder-navigation"></div>-->
+        <div class="mt-6" style="display: grid; grid-template-columns: 1fr 2fr 1fr; align-items: center;">
+            <div>
+                <router-link
+                    :to="`/programs/${program.id}`"
+                    class="__button --small"
+                >
+                    <svg class="__svg" style="fill: var(--primary-color); transform: rotate(180deg);">
+                        <use xlink:href="#arrow"></use>
+                    </svg>
+                </router-link>
+            </div>
+            <div></div>
+            <div class="flex justify-end">
+                <call-support-component :show-text="false" />
+            </div>
         </div>
 
+        <!--
         <div class="mt-6 text-center">
             <call-support-component />
         </div>
-        <div class="mt-4 text-center">
+        -->
+
+        <div class="mt-4 text-center" style="font-size: 0.75rem; font-weight: 500; margin-top: 1rem;">
             <input type="checkbox" checked disabled>
-            Выбирая оплату, вы принимаете условия сервиса<template
+            Выбирая оплату, вы принимаете условия сервиса
+            <template
                 v-if="property?.proprietor?.public_offer_url"
-            > и <offer-link-component
-                :url="property.proprietor.public_offer_url"
-            /></template>. При оплате картой также действуют условия
+            > и
+                <offer-link-component
+                    :url="property.proprietor.public_offer_url"
+                />
+            </template>
+            . При оплате картой также действуют условия
             платёжного агрегатора.
         </div>
     </main>
@@ -304,17 +321,15 @@ onBeforeUnmount(() => {
     width: 100%;
     min-height: 6.5rem;
     padding: 0.75rem;
-    border: 0.12rem solid rgba(34, 64, 98, 0.14);
     border-radius: 0.85rem;
     color: var(--primary-color);
     background: #ffffff;
     box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.18);
     text-align: left;
     cursor: pointer;
-    transition:
-        border-color 0.2s ease-out,
-        box-shadow 0.2s ease-out,
-        transform 0.1s ease-out;
+    transition: border-color 0.2s ease-out,
+    box-shadow 0.2s ease-out,
+    transform 0.1s ease-out;
 }
 
 .payment-method-button:focus-visible {

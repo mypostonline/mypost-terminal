@@ -14,11 +14,23 @@ test('loads backend defaults without an env file', () => {
     assert.equal(config.billAcceptor.mode, 'disabled');
     assert.equal(config.billAcceptor.debounceMs, 70);
     assert.equal(config.billAcceptor.maxPacketTimeMs, 3000);
+    assert.equal(config.billAcceptor.relay.enabled, false);
+    assert.equal(
+        config.billAcceptor.relay.url,
+        'http://127.0.0.1:3181/bill-acceptor/relay'
+    );
+    assert.equal(config.billAcceptor.relay.leaseMs, 15_000);
+    assert.equal(config.billAcceptor.relay.renewIntervalMs, 5_000);
+    assert.equal(config.billAcceptor.relay.requestTimeoutMs, 3_000);
     assert.deepEqual(
         config.billAcceptor.validAmountsRub,
         [ 50, 100, 500, 1000 ]
     );
-    assert.equal(config.cashPayment.timeoutSec, 300);
+    assert.equal(config.cashPayment.billTimeoutSec, 120);
+    assert.equal(config.cashPayment.partialDecisionTimeoutSec, 600);
+    assert.equal(config.cashPayment.fiscalizationEnabled, false);
+    assert.equal(config.cashPayment.fiscalProductId, '1');
+    assert.equal(config.cashPayment.fiscalProductName, 'WASH');
 });
 
 test('normalizes configured backend values', () => {
@@ -32,6 +44,17 @@ test('normalizes configured backend values', () => {
             BILL_ACCEPTOR_ENABLED: 'true',
             BILL_ACCEPTOR_DRIVER: 'mock',
             BILL_ACCEPTOR_VALID_AMOUNTS: '100, 200,500',
+            BILL_ACCEPTOR_RELAY_ENABLED: 'true',
+            BILL_ACCEPTOR_RELAY_URL:
+                'http://127.0.0.1:4181/bill-acceptor/relay',
+            BILL_ACCEPTOR_RELAY_LEASE_MS: '12000',
+            BILL_ACCEPTOR_RELAY_RENEW_INTERVAL_MS: '4000',
+            BILL_ACCEPTOR_RELAY_REQUEST_TIMEOUT_MS: '2500',
+            CASH_PAYMENT_BILL_TIMEOUT_SEC: '90',
+            CASH_PAYMENT_PARTIAL_DECISION_TIMEOUT_SEC: '480',
+            CASH_FISCALIZATION_ENABLED: 'true',
+            CASH_FISCALIZATION_PRODUCT_ID: '12',
+            CASH_FISCALIZATION_PRODUCT_NAME: 'CAR_WASH',
         },
     });
 
@@ -43,6 +66,19 @@ test('normalizes configured backend values', () => {
     assert.equal(config.billAcceptor.driver, 'mock');
     assert.equal(config.billAcceptor.mode, 'mock');
     assert.deepEqual(config.billAcceptor.validAmountsRub, [ 100, 200, 500 ]);
+    assert.equal(config.billAcceptor.relay.enabled, true);
+    assert.equal(
+        config.billAcceptor.relay.url,
+        'http://127.0.0.1:4181/bill-acceptor/relay'
+    );
+    assert.equal(config.billAcceptor.relay.leaseMs, 12_000);
+    assert.equal(config.billAcceptor.relay.renewIntervalMs, 4_000);
+    assert.equal(config.billAcceptor.relay.requestTimeoutMs, 2_500);
+    assert.equal(config.cashPayment.billTimeoutSec, 90);
+    assert.equal(config.cashPayment.partialDecisionTimeoutSec, 480);
+    assert.equal(config.cashPayment.fiscalizationEnabled, true);
+    assert.equal(config.cashPayment.fiscalProductId, '12');
+    assert.equal(config.cashPayment.fiscalProductName, 'CAR_WASH');
 });
 
 test('rejects invalid boolean and device driver configuration', () => {

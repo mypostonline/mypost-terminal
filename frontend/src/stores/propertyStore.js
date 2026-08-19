@@ -2,6 +2,10 @@ import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
 import { subscribeMqtt } from '@/functions/mqtt.js';
 import api from '@/functions/api.js';
+import {
+    calculateCashbackAmount,
+    getCashbackLoyalty,
+} from '@/functions/cashback.js';
 
 const PROPERTY_ID = Number(import.meta.env.VITE_PROPERTY_ID);
 const POST_ID = Number(import.meta.env.VITE_POST_ID);
@@ -47,7 +51,10 @@ export const usePropertyStore = defineStore('propertyStore', () => {
             property_id: property.value.id || 0,
             post_id: post.value?.id || 0,
             program_id: program.value.id || 0,
+            loyalty_id: null,
             addons: [],
+            cashback_percent: 0,
+            cashback_amount: 0,
             amount: 0,
             total_amount: 0,
             source: 'terminal',
@@ -71,7 +78,19 @@ export const usePropertyStore = defineStore('propertyStore', () => {
             });
         }
 
+        const cashbackLoyalty = getCashbackLoyalty(
+            property.value.loyalties
+        );
+        if (cashbackLoyalty) {
+            result.loyalty_id = cashbackLoyalty.id;
+            result.cashback_percent = asMoney(cashbackLoyalty.percent);
+        }
+
         result.total_amount = result.amount;
+        result.cashback_amount = calculateCashbackAmount(
+            result.total_amount,
+            result.cashback_percent
+        );
         return result;
     });
 

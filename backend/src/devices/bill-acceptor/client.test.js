@@ -43,6 +43,86 @@ const createGpioClient = async (options = {}) => {
     };
 };
 
+class FakeAcceptanceGate extends EventEmitter {
+    constructor () {
+        super();
+        this.enableCalls = 0;
+        this.disableCalls = 0;
+        this.status = {
+            enabled: true,
+            connected: true,
+            available: true,
+            state: 'ready',
+            relayEnabled: false,
+        };
+    }
+
+    getStatus () {
+        return { ...this.status };
+    }
+
+    async enable () {
+        this.enableCalls += 1;
+        this.status.state = 'enabled';
+        this.status.relayEnabled = true;
+        this.emit('status', this.getStatus());
+    }
+
+    async disable () {
+        this.disableCalls += 1;
+        this.status.state = 'ready';
+        this.status.relayEnabled = false;
+        this.emit('status', this.getStatus());
+    }
+}
+
+test('controls the acceptance relay with the cash acceptance state', async () => {
+    const acceptanceGate = new FakeAcceptanceGate();
+    const client = new BillAcceptorClient({
+        mode: 'mock',
+        acceptanceGate,
+    });
+    await client.start();
+
+    await client.enableAcceptance();
+    assert.equal(acceptanceGate.enableCalls, 1);
+    assert.equal(client.getStatus().state, 'accepting');
+    assert.equal(client.getStatus().relay.relayEnabled, true);
+
+    await client.disableAcceptance();
+    assert.equal(acceptanceGate.disableCalls, 1);
+    assert.equal(client.getStatus().state, 'ready');
+    assert.equal(client.getStatus().relay.relayEnabled, false);
+});
+
+test('stops cash acceptance when the relay lease is lost', async () => {
+    const acceptanceGate = new FakeAcceptanceGate();
+    const client = new BillAcceptorClient({
+        mode: 'mock',
+        acceptanceGate,
+    });
+    client.on('error', () => {});
+    await client.start();
+    await client.enableAcceptance();
+
+    const errorEvent = once(client, 'error');
+    acceptanceGate.status = {
+        ...acceptanceGate.status,
+        available: false,
+        state: 'error',
+        relayEnabled: false,
+    };
+    acceptanceGate.emit(
+        'lost',
+        new Error('Bill acceptor relay lease expired')
+    );
+    const [ error ] = await errorEvent;
+
+    assert.match(error.message, /lease expired/);
+    assert.equal(client.getStatus().state, 'error');
+    assert.equal(client.getStatus().available, false);
+});
+
 test('starts gpiomon with the configured Raspberry Pi GPIO line', async () => {
     const { client, spawnCalls } = await createGpioClient({
         gpioChip: 'gpiochip2',

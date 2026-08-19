@@ -11,6 +11,7 @@ const {
 } = require('./protocol');
 const {
     createAbr,
+    createCashSaleIdl,
     createDis,
     createFin,
     createIdl,
@@ -81,6 +82,7 @@ class VtkClient extends EventEmitter {
         );
         this.operationNumber = 0;
         this.eventNumber = 0;
+        this.cashSaleInProgress = false;
 
         this.keepaliveTimer = null;
         this.reconnectTimer = null;
@@ -273,6 +275,7 @@ class VtkClient extends EventEmitter {
         this.operationActive = false;
         this.paymentInProgress = false;
         this.currentOperation = null;
+        this.cashSaleInProgress = false;
     }
 
     emitStatus(type, extra = {}) {
@@ -311,7 +314,8 @@ class VtkClient extends EventEmitter {
                 if (
                     !this.connected ||
                     !this.handshaked ||
-                    this.operationActive
+                    this.operationActive ||
+                    this.cashSaleInProgress
                 ) {
                     return;
                 }
@@ -480,6 +484,104 @@ class VtkClient extends EventEmitter {
         this.sendCommand(createDis({
             operationNumber: this.operationNumber,
         }));
+    }
+
+    async registerCashSale({
+        amountMinor,
+        productId = 1,
+        productName = 'WASH',
+        eventName = 'CSAPP',
+    }) {
+        if (!this.connected || !this.handshaked) {
+            const error = new Error('Vendotek is not ready');
+            error.code = 'cash_fiscalization_unavailable';
+            error.outcomeUnknown = false;
+            throw error;
+        }
+        if (
+            this.terminalState !== 'idle' ||
+            this.operationActive ||
+            this.paymentInProgress ||
+            this.cashSaleInProgress
+        ) {
+            const error = new Error('Vendotek is busy');
+            error.code = 'cash_fiscalization_unavailable';
+            error.outcomeUnknown = false;
+            throw error;
+        }
+
+        const eventNumber = this.eventNumber + 1;
+        const command = createCashSaleIdl({
+            operationNumber: this.operationNumber,
+            eventNumber,
+            amountMinor,
+            eventName,
+            productId,
+            productName,
+        });
+        let requestSent = false;
+
+        this.cashSaleInProgress = true;
+        this.terminalState = 'cash_fiscalizing';
+        this.emitStatus('cash_sale_started', {
+            eventNumber,
+            amountMinor: Number(amountMinor),
+        });
+
+        try {
+            const response = await this.waitForMessage(
+                message => (
+                    message.messageName === 'IDL' &&
+                    Number(message.eventNumber) === eventNumber
+                ),
+                this.operationTimeoutSec * 1000,
+                `cash sale IDL event ${eventNumber}`,
+                () => {
+                    requestSent = true;
+                    this.sendCommand(command);
+                }
+            );
+
+            this.eventNumber = eventNumber;
+            this.terminalState = 'idle';
+            this.emitStatus('cash_sale_registered', {
+                eventNumber,
+                amountMinor: Number(amountMinor),
+            });
+
+            return {
+                eventNumber,
+                amountMinor: Number(amountMinor),
+                response,
+            };
+        }
+        catch (cause) {
+            const error = new Error(
+                requestSent
+                    ? 'Cash fiscalization outcome is unknown'
+                    : cause.message,
+                { cause }
+            );
+            error.code = requestSent
+                ? 'cash_fiscalization_outcome_unknown'
+                : 'cash_fiscalization_failed';
+            error.outcomeUnknown = requestSent;
+
+            if (requestSent) {
+                this.recoverFromOperationError(
+                    'cash_fiscalization_error',
+                    error
+                );
+            }
+            else {
+                this.terminalState = 'idle';
+            }
+
+            throw error;
+        }
+        finally {
+            this.cashSaleInProgress = false;
+        }
     }
 
     sendAbr(operationNumber = this.operationNumber) {
@@ -681,6 +783,7 @@ class VtkClient extends EventEmitter {
             paymentWaitSec: this.paymentWaitSec,
             operationActive: this.operationActive,
             paymentInProgress: this.paymentInProgress,
+            cashSaleInProgress: this.cashSaleInProgress,
             currentOperation: this.currentOperation
                 ? { ...this.currentOperation }
                 : null,

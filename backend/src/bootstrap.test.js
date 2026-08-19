@@ -133,6 +133,48 @@ test('accepts several mock bills and returns a signed change QR', async t => {
     assert.equal(payload.amountMinor, 3_000);
 });
 
+test('starts Vendotek for cash fiscalization when card payments are disabled', async t => {
+    const config = loadConfig({
+        envFile: null,
+        env: {
+            CARD_TERMINAL_ENABLED: 'false',
+            CARD_TERMINAL_DRIVER: 'mock',
+            CASH_FISCALIZATION_ENABLED: 'true',
+            BILL_ACCEPTOR_ENABLED: 'true',
+            BILL_ACCEPTOR_DRIVER: 'mock',
+        },
+    });
+    config.server.port = 0;
+
+    const backend = await startBackend({ config, logger: silentLogger });
+    t.after(() => backend.stop());
+    const { port } = backend.server.address();
+
+    const started = await postJson({
+        port,
+        path: '/api/cash/start',
+        data: {
+            orderId: 'fiscalized-mock-cash',
+            amountMinor: 5_000,
+            productId: 12,
+            productName: 'WASH',
+        },
+    });
+    assert.equal(started.status, 201);
+
+    await postJson({
+        port,
+        path: '/api/cash/mock/insert',
+        data: { amountMinor: 5_000 },
+    });
+    const session = await backend.services.cashPayments.waitForSettlement();
+
+    assert.equal(session.state, 'completed');
+    assert.equal(session.fiscalization.state, 'completed');
+    assert.equal(session.fiscalization.eventNumber, 1);
+    assert.equal(backend.services.cardTerminal.getState().connected, true);
+});
+
 test('approves and declines card payments through the mock driver', async t => {
     const config = loadConfig({
         envFile: null,

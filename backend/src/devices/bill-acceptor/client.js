@@ -16,6 +16,7 @@ class BillAcceptorClient extends EventEmitter {
         gpiomonCommand = 'gpiomon',
         spawnProcess = spawn,
         now = () => Date.now(),
+        acceptanceGate = null,
         debug = false,
     } = {}) {
         super();
@@ -63,6 +64,7 @@ class BillAcceptorClient extends EventEmitter {
         this.gpiomonCommand = String(gpiomonCommand);
         this.spawnProcess = spawnProcess;
         this.now = now;
+        this.acceptanceGate = acceptanceGate;
         this.debug = debug;
 
         this.state = 'disconnected';
@@ -75,6 +77,20 @@ class BillAcceptorClient extends EventEmitter {
         this.packetWasAccepting = false;
         this.isStopping = false;
         this.processErrorReported = false;
+
+        if (this.acceptanceGate) {
+            this.acceptanceGate.on('status', () => {
+                this.emit('status', this.getStatus());
+            });
+            this.acceptanceGate.on('lost', error => {
+                if (this.state !== 'accepting') {
+                    return;
+                }
+                this.clearPacket();
+                this.setState('error');
+                this.emit('error', error);
+            });
+        }
     }
 
     log (...args) {
@@ -148,6 +164,14 @@ class BillAcceptorClient extends EventEmitter {
     }
 
     async stop () {
+        if (this.acceptanceGate?.getStatus().relayEnabled) {
+            try {
+                await this.acceptanceGate.disable();
+            }
+            catch (error) {
+                this.log('failed to disable acceptance relay', error);
+            }
+        }
         this.clearPacket();
 
         if (!this.monitor) {
@@ -216,6 +240,9 @@ class BillAcceptorClient extends EventEmitter {
             throw new Error('A bill pulse packet is still being processed');
         }
 
+        if (this.acceptanceGate) {
+            await this.acceptanceGate.enable();
+        }
         this.setState('accepting');
         return this.getStatus();
     }
@@ -226,6 +253,16 @@ class BillAcceptorClient extends EventEmitter {
         }
         if (this.pulses > 0) {
             throw new Error('A bill pulse packet is still being processed');
+        }
+
+        if (this.acceptanceGate) {
+            try {
+                await this.acceptanceGate.disable();
+            }
+            catch (error) {
+                this.setState('error');
+                throw error;
+            }
         }
 
         if (this.state === 'accepting') {
@@ -424,6 +461,7 @@ class BillAcceptorClient extends EventEmitter {
     getStatus () {
         const baseAvailable =
             this.state === 'ready' || this.state === 'accepting';
+        const relay = this.acceptanceGate?.getStatus() || null;
 
         return {
             mode: this.mode,
@@ -432,11 +470,12 @@ class BillAcceptorClient extends EventEmitter {
             testMode: this.mode === 'mock',
             supportedAmountsRub: [ ...this.validAmountsRub ],
             state: this.state,
-            available: baseAvailable && (
-                this.state === 'accepting' || this.pulses === 0
-            ),
+            available: baseAvailable &&
+                (relay?.available ?? true) &&
+                (this.state === 'accepting' || this.pulses === 0),
             accepting: this.state === 'accepting',
             pendingPulses: this.pulses,
+            relay,
             ...(this.mode === 'gpio-pulse' ? {
                 gpio: {
                     chip: this.gpioChip,

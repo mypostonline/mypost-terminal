@@ -56,16 +56,24 @@ const isProgramAvailable = (program) => {
                     </div>
                 </template>
             </div>
-            <div class="mt-6">
-                <router-link to="/" class="__button --small">
-                    <svg class="__svg" style="fill: var(--primary-color); transform: rotate(180deg);">
-                        <use xlink:href="#arrow"></use>
-                    </svg>
-                </router-link>
+            <div class="mt-6" style="display: grid; grid-template-columns: 1fr 2fr 1fr; align-items: center;">
+                <div>
+                    <router-link to="/" class="__button --small">
+                        <svg class="__svg" style="fill: var(--primary-color); transform: rotate(180deg);">
+                            <use xlink:href="#arrow"></use>
+                        </svg>
+                    </router-link>
+                </div>
+                <div></div>
+                <div class="flex justify-end">
+                    <call-support-component :show-text="false" />
+                </div>
             </div>
+            <!--
             <div class="mt-6 text-center">
                 <call-support-component />
             </div>
+            -->
         </div>
 
     </main>

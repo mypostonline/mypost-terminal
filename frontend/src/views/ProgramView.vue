@@ -106,10 +106,16 @@ const isExcludedAddon = (addon) => {
                     Итого {{ getPrice(order.total_amount) }}
                 </router-link>
             </div>
+            <div class="flex justify-end">
+                <call-support-component :show-text="false" />
+            </div>
         </div>
+
+        <!--
         <div class="mt-6 text-center">
             <call-support-component />
         </div>
+        -->
 
     </main>
 

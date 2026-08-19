@@ -10,6 +10,7 @@ const registerStatusRoutes = (app, {
             cardTerminal: cardPayments.getDeviceStatus(),
             cardPayment: cardPayments.getSession(),
             billAcceptor: billAcceptor.getStatus(),
+            cashFiscalization: cashPayments.getFiscalizationStatus(),
             cashPayment: cashPayments.getSession(),
         });
     });

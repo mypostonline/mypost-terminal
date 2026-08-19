@@ -26,20 +26,6 @@ const sanitizeOrder = order => ({
     items: Array.isArray(order?.items) ? order.items : [],
 });
 
-const sanitizeChangeCredit = claim => {
-    const amountMinor = Number(claim?.amountMinor);
-    if (!Number.isInteger(amountMinor) || amountMinor <= 0) {
-        return null;
-    }
-
-    return {
-        status: String(claim.status || 'configuration_required'),
-        amountMinor,
-        qrPayload: claim.qrPayload ? String(claim.qrPayload) : null,
-        expiresAt: claim.expiresAt ? String(claim.expiresAt) : null,
-    };
-};
-
 export const usePaymentStore = defineStore('paymentStore', () => {
     clearLegacyStoredPayment();
 
@@ -47,20 +33,14 @@ export const usePaymentStore = defineStore('paymentStore', () => {
     const orderSnapshot = ref(null);
     const paidAmount = ref(null);
     const error = ref('');
-    const changeCredit = ref(null);
 
     const orderId = computed(() => orderSnapshot.value?.id);
     const isNavigationLocked = computed(() => LOCKED_PHASES.has(phase.value));
-    const hasPendingChangeCredit = computed(() => (
-        phase.value === 'completed' &&
-        Number(changeCredit.value?.amountMinor) > 0
-    ));
 
     const prepare = order => {
         orderSnapshot.value = sanitizeOrder(order);
         paidAmount.value = null;
         error.value = '';
-        changeCredit.value = null;
         phase.value = 'prepared';
     };
 
@@ -70,7 +50,6 @@ export const usePaymentStore = defineStore('paymentStore', () => {
                 String(order.id);
             orderSnapshot.value = sanitizeOrder(order);
             if (!isSameOrder) {
-                changeCredit.value = null;
                 paidAmount.value = null;
             }
         }
@@ -82,10 +61,6 @@ export const usePaymentStore = defineStore('paymentStore', () => {
         paidAmount.value = Number(amount);
         phase.value = 'reconciling';
         error.value = '';
-    };
-
-    const setChangeCredit = claim => {
-        changeCredit.value = sanitizeChangeCredit(claim);
     };
 
     const markReconciliationRequired = message => {
@@ -113,7 +88,6 @@ export const usePaymentStore = defineStore('paymentStore', () => {
         orderSnapshot.value = null;
         paidAmount.value = null;
         error.value = '';
-        changeCredit.value = null;
     };
 
     const matchesOrder = candidateOrderId => {
@@ -126,24 +100,16 @@ export const usePaymentStore = defineStore('paymentStore', () => {
             LOCKED_PHASES.has(phase.value);
     };
 
-    const hasChangeCreditForOrder = candidateOrderId => {
-        return matchesOrder(candidateOrderId) &&
-            hasPendingChangeCredit.value;
-    };
-
     return {
         phase,
         orderSnapshot,
         orderId,
         paidAmount,
         error,
-        changeCredit,
         isNavigationLocked,
-        hasPendingChangeCredit,
         prepare,
         markProcessing,
         markApproved,
-        setChangeCredit,
         markReconciliationRequired,
         markAttentionRequired,
         markCompleted,
@@ -151,6 +117,5 @@ export const usePaymentStore = defineStore('paymentStore', () => {
         clear,
         matchesOrder,
         isRecoverableOrder,
-        hasChangeCreditForOrder,
     };
 });

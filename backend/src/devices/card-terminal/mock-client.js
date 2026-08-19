@@ -6,6 +6,7 @@ class MockCardTerminal extends EventEmitter {
         this.driver = 'mock';
         this.debug = Boolean(debug);
         this.operationNumber = 0;
+        this.eventNumber = 0;
         this.pendingPayment = null;
         this.state = {
             connected: false,
@@ -13,6 +14,7 @@ class MockCardTerminal extends EventEmitter {
             terminalState: 'disconnected',
             operationActive: false,
             paymentInProgress: false,
+            cashSaleInProgress: false,
         };
     }
 
@@ -41,6 +43,7 @@ class MockCardTerminal extends EventEmitter {
             terminalState: 'idle',
             operationActive: false,
             paymentInProgress: false,
+            cashSaleInProgress: false,
         });
     }
 
@@ -54,6 +57,7 @@ class MockCardTerminal extends EventEmitter {
             terminalState: 'disconnected',
             operationActive: false,
             paymentInProgress: false,
+            cashSaleInProgress: false,
         });
     }
 
@@ -145,6 +149,42 @@ class MockCardTerminal extends EventEmitter {
 
     cancelPayment (reason = 'customer_canceled') {
         return this.simulateDecline(reason);
+    }
+
+    async registerCashSale ({ amountMinor, productId, productName }) {
+        const normalizedAmount = Number(amountMinor);
+        if (!Number.isInteger(normalizedAmount) || normalizedAmount <= 0) {
+            throw new Error('amountMinor must be a positive integer');
+        }
+        if (
+            !this.state.connected ||
+            this.state.terminalState !== 'idle' ||
+            this.pendingPayment
+        ) {
+            throw new Error('Mock card terminal is busy');
+        }
+
+        this.eventNumber += 1;
+        this.updateState({
+            terminalState: 'cash_fiscalizing',
+            cashSaleInProgress: true,
+        });
+        await Promise.resolve();
+        this.updateState({
+            terminalState: 'idle',
+            cashSaleInProgress: false,
+        });
+
+        return {
+            eventNumber: this.eventNumber,
+            amountMinor: normalizedAmount,
+            productId,
+            productName,
+            response: {
+                messageName: 'IDL',
+                eventNumber: String(this.eventNumber),
+            },
+        };
     }
 
     async finalizeSuccess () {

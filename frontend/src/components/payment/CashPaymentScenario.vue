@@ -1,7 +1,16 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import OrderSummaryComponent from "@/components/order/OrderSummaryComponent.vue";
+import CallSupportComponent from "@/components/CallSupportComponent.vue";
 import localApi from "@/functions/localApi.js";
+import {
+    creditCashToBalance,
+    recordCashBill,
+} from "@/functions/cashOrderApi.js";
+import {
+    formatCountdown,
+    getSecondsUntil,
+} from "@/functions/paymentTimer.js";
 
 const props = defineProps({
     order: {
@@ -16,7 +25,7 @@ const props = defineProps({
 
 const emit = defineEmits([
     'approved',
-    'change-credit',
+    'balance-credit-ready',
     'failed',
     'attention',
     'canceled',
@@ -32,8 +41,13 @@ const isMockMode = ref(false);
 const mockAmountsRub = ref([]);
 const isMockInserting = ref(false);
 const mockError = ref('');
+const isResuming = ref(false);
+const isCreditingBalance = ref(false);
+const balanceCreditError = ref('');
+const billSyncError = ref('');
+const countdownNowMs = ref(Date.now());
 const approvedEmitted = ref(false);
-const changeCreditEmitted = ref(false);
+const balanceCreditEmitted = ref(false);
 const failedEmitted = ref(false);
 const attentionEmitted = ref(false);
 const canceledEmitted = ref(false);
@@ -41,7 +55,12 @@ const canceledEmitted = ref(false);
 let socket = null;
 let pollTimer = null;
 let reconnectTimer = null;
+let countdownTimer = null;
 let isUnmounted = false;
+const COUNTDOWN_REFRESH_INTERVAL_MS = 200;
+const recordedBillIds = new Set();
+const recordingBillIds = new Set();
+const attemptedBalanceCreditSessions = new Set();
 
 const targetAmountMinor = computed(() => {
     return Math.round(Number(props.order.total_amount) * 100);
@@ -57,11 +76,27 @@ const remainingAmountMinor = computed(() => {
     );
 });
 
-const acceptedBills = computed(() => {
-    return Array.isArray(session.value?.bills) ? session.value.bills : [];
-});
-
 const cashState = computed(() => session.value?.state || 'preparing');
+const isPartialPayment = computed(() => cashState.value === 'partial_payment');
+const isBalanceCredit = computed(() => (
+    [ 'balance_credit_required', 'balance_credit_ready' ].includes(
+        cashState.value
+    )
+));
+const decisionSecondsLeft = computed(() => getSecondsUntil(
+    session.value?.decisionDeadlineAt,
+    countdownNowMs.value
+));
+const acceptanceSecondsLeft = computed(() => getSecondsUntil(
+    session.value?.acceptanceDeadlineAt,
+    countdownNowMs.value
+));
+const decisionTimeLabel = computed(() => (
+    formatCountdown(decisionSecondsLeft.value)
+));
+const acceptanceTimeLabel = computed(() => (
+    formatCountdown(acceptanceSecondsLeft.value)
+));
 const canCancel = computed(() => {
     return (
         [ 'preparing', 'accepting' ].includes(cashState.value) &&
@@ -90,7 +125,7 @@ const getSocketUrl = () => {
 
 const failureMessage = (sessionState) => {
     if (sessionState?.error === 'cash_payment_timeout') {
-        return 'Время ожидания истекло. Купюры не были внесены';
+        return 'Время ожидания истекло';
     }
 
     if (sessionState?.state === 'canceled') {
@@ -98,6 +133,104 @@ const failureMessage = (sessionState) => {
     }
 
     return 'Купюроприёмник недоступен. Выберите другой способ оплаты';
+};
+
+const synchronizeBills = nextSession => {
+    for (const bill of nextSession?.bills || []) {
+        if (
+            !bill?.id ||
+            recordedBillIds.has(bill.id) ||
+            recordingBillIds.has(bill.id)
+        ) {
+            continue;
+        }
+
+        recordingBillIds.add(bill.id);
+        recordCashBill({
+            orderId: props.order.id,
+            sessionId: nextSession.id,
+            bill,
+        }).then(() => {
+            recordedBillIds.add(bill.id);
+            billSyncError.value = '';
+        }).catch(error => {
+            console.error('Failed to record accepted cash bill', error);
+            billSyncError.value =
+                'Повторяем фиксацию принятой купюры на сервере…';
+        }).finally(() => {
+            recordingBillIds.delete(bill.id);
+        });
+    }
+};
+
+const confirmLocalBalanceCredit = async ({ sessionId }) => {
+    return localApi('/api/cash/balance-credit/confirm', {
+        method: 'POST',
+        data: { sessionId },
+    });
+};
+
+const creditPartialBalance = async (
+    sourceSession = session.value,
+    { force = false } = {}
+) => {
+    if (
+        !sourceSession?.id ||
+        ![ 'partial_payment', 'balance_credit_required' ].includes(
+            sourceSession.state
+        ) ||
+        isCreditingBalance.value
+    ) {
+        return;
+    }
+    if (
+        !force &&
+        attemptedBalanceCreditSessions.has(sourceSession.id)
+    ) {
+        return;
+    }
+
+    attemptedBalanceCreditSessions.add(sourceSession.id);
+    isCreditingBalance.value = true;
+    balanceCreditError.value = '';
+
+    try {
+        let creditSession = sourceSession;
+        if (sourceSession.state === 'partial_payment') {
+            const requested = await localApi(
+                '/api/cash/balance-credit/request',
+                {
+                    method: 'POST',
+                    data: { sessionId: sourceSession.id },
+                }
+            );
+            creditSession = requested.session;
+            applyStatus(requested);
+        }
+
+        await creditCashToBalance({
+            orderId: props.order.id,
+            session: creditSession,
+        });
+
+        if (isUnmounted || session.value?.state === 'released') {
+            return;
+        }
+
+        const confirmed = await confirmLocalBalanceCredit({
+            sessionId: creditSession.id,
+        });
+        applyStatus(confirmed);
+    }
+    catch (error) {
+        console.error('Failed to credit partial cash payment', error);
+        balanceCreditError.value =
+            'Не удалось подготовить зачисление на баланс. Повторите попытку или вызовите оператора';
+        await refreshStatus();
+    }
+    finally {
+        isCreditingBalance.value = false;
+    }
 };
 
 const applySession = (nextSession) => {
@@ -110,14 +243,14 @@ const applySession = (nextSession) => {
     }
 
     session.value = nextSession;
+    if (nextSession.state !== 'accepting') {
+        isReadingBill.value = false;
+    }
+    countdownNowMs.value = Date.now();
+    synchronizeBills(nextSession);
 
-    if (
-        nextSession.state === 'completed' &&
-        Number(nextSession.changeCredit?.amountMinor) > 0 &&
-        !changeCreditEmitted.value
-    ) {
-        changeCreditEmitted.value = true;
-        emit('change-credit', nextSession.changeCredit);
+    if (nextSession.state === 'balance_credit_required') {
+        creditPartialBalance(nextSession);
     }
 
     if (nextSession.state === 'completed' && !approvedEmitted.value) {
@@ -127,7 +260,16 @@ const applySession = (nextSession) => {
     }
 
     if (
-        nextSession.state === 'canceled' &&
+        nextSession.state === 'balance_credit_ready' &&
+        !balanceCreditEmitted.value
+    ) {
+        balanceCreditEmitted.value = true;
+        emit('balance-credit-ready');
+        return;
+    }
+
+    if (
+        [ 'canceled', 'released' ].includes(nextSession.state) &&
         !canceledEmitted.value
     ) {
         canceledEmitted.value = true;
@@ -148,10 +290,37 @@ const applySession = (nextSession) => {
         attentionEmitted.value = true;
         emit(
             'attention',
-            nextSession.error === 'bill_amount_unrecognized'
-                ? 'Не удалось распознать номинал купюры. Не вносите новые купюры и вызовите оператора'
-                : 'Купюры приняты не полностью. Не начинайте новую оплату'
+            nextSession.error?.startsWith('cash_fiscalization_')
+                ? 'Деньги приняты, но Vendotek не подтвердил фискализацию. Не повторяйте оплату и вызовите оператора'
+                : nextSession.error === 'bill_amount_unrecognized'
+                    ? 'Не удалось распознать номинал купюры. Не вносите новые купюры и вызовите оператора'
+                    : 'Купюры приняты не полностью. Не начинайте новую оплату'
         );
+    }
+};
+
+const resumePartialPayment = async () => {
+    if (!isPartialPayment.value || !session.value?.id || isResuming.value) {
+        return;
+    }
+
+    isResuming.value = true;
+    balanceCreditError.value = '';
+    try {
+        const data = await localApi('/api/cash/resume', {
+            method: 'POST',
+            data: { sessionId: session.value.id },
+        });
+        applyStatus(data);
+    }
+    catch (error) {
+        console.error('Failed to resume partial cash payment', error);
+        balanceCreditError.value =
+            'Не удалось продолжить приём купюр. Повторите попытку или вызовите оператора';
+        await refreshStatus();
+    }
+    finally {
+        isResuming.value = false;
     }
 };
 
@@ -284,6 +453,11 @@ const connectSocket = () => {
                         'bill_accepted',
                         'completed',
                         'failed',
+                        'partial_payment',
+                        'resumed',
+                        'balance_credit_required',
+                        'balance_credit_ready',
+                        'released',
                         'attention_required',
                     ].includes(message.payload?.event)
                 ) {
@@ -337,6 +511,7 @@ const startPayment = async () => {
             data: {
                 orderId: props.order.id,
                 amountMinor: targetAmountMinor.value,
+                productId: props.order.program_id || 1,
             },
         });
         applyStatus(data);
@@ -352,6 +527,8 @@ const startPayment = async () => {
                 'failed',
                 error.code === 'cash_payment_busy'
                     ? 'Купюроприёмник занят. Вызовите оператора'
+                    : error.code === 'cash_fiscalizer_unavailable'
+                        ? 'Касса Vendotek недоступна. Выберите оплату картой или вызовите оператора'
                     : 'Купюроприёмник недоступен. Выберите другой способ оплаты'
             );
         }
@@ -390,6 +567,9 @@ const resumePayment = async () => {
 
 onMounted(() => {
     connectSocket();
+    countdownTimer = window.setInterval(() => {
+        countdownNowMs.value = Date.now();
+    }, COUNTDOWN_REFRESH_INTERVAL_MS);
     if (props.resumeOnly) {
         resumePayment();
     }
@@ -407,6 +587,9 @@ onBeforeUnmount(() => {
     if (reconnectTimer) {
         window.clearTimeout(reconnectTimer);
     }
+    if (countdownTimer) {
+        window.clearInterval(countdownTimer);
+    }
     if (socket) {
         socket.close();
     }
@@ -420,7 +603,17 @@ onBeforeUnmount(() => {
                 <use xlink:href="#clock-waiting"></use>
             </svg>
             <h2 class="mt-4">
-                {{ cashState === 'accepting' ? 'Внесите наличные' : 'Оплата наличными' }}
+                {{
+                    cashState === 'accepting'
+                        ? 'Внесите наличные'
+                        : cashState === 'fiscalizing'
+                            ? 'Формируем кассовый чек'
+                        : isPartialPayment
+                            ? 'Оплата приостановлена'
+                            : isBalanceCredit
+                                ? 'Зачисление на баланс'
+                                : 'Оплата наличными'
+                }}
             </h2>
         </div>
 
@@ -428,12 +621,22 @@ onBeforeUnmount(() => {
 
         <div
             class="cash-device-status mt-6"
-            :class="{ '--attention': cashState === 'attention_required' }"
+            :class="{
+                '--attention': cashState === 'attention_required',
+            }"
         >
             <span class="cash-device-icon">
                 <svg class="__svg">
                     <use xlink:href="#cash"></use>
                 </svg>
+            </span>
+
+            <span
+                v-if="cashState === 'accepting'"
+                class="cash-device-timer"
+                aria-label="Оставшееся время на внесение купюры"
+            >
+                <strong>{{ acceptanceTimeLabel }}</strong>
             </span>
 
             <span v-if="cashState === 'accepting'" class="cash-device-content">
@@ -458,6 +661,38 @@ onBeforeUnmount(() => {
             </span>
 
             <span
+                v-else-if="cashState === 'fiscalizing'"
+                class="cash-device-content"
+            >
+                <strong>Передаём продажу в Vendotek</strong>
+                <span>Не закрывайте экран и не начинайте новую оплату</span>
+            </span>
+
+            <span
+                v-else-if="isPartialPayment"
+                class="cash-device-content"
+            >
+                <strong>Приём купюр приостановлен</strong>
+                <span>Выберите, как поступить с уже внесённой суммой</span>
+            </span>
+
+            <span
+                v-else-if="cashState === 'balance_credit_required'"
+                class="cash-device-content"
+            >
+                <strong>Зачисляем внесённую сумму</strong>
+                <span>Дождитесь экрана с QR-кодом заказа</span>
+            </span>
+
+            <span
+                v-else-if="cashState === 'balance_credit_ready'"
+                class="cash-device-content"
+            >
+                <strong>Сумма подготовлена к зачислению</strong>
+                <span>Отсканируйте QR-код, затем можно начать новый заказ</span>
+            </span>
+
+            <span
                 v-else-if="cashState === 'attention_required'"
                 class="cash-device-content"
             >
@@ -472,7 +707,14 @@ onBeforeUnmount(() => {
         </div>
 
         <div
-            v-if="[ 'accepting', 'attention_required' ].includes(cashState)"
+            v-if="[
+                'accepting',
+                'fiscalizing',
+                'partial_payment',
+                'balance_credit_required',
+                'balance_credit_ready',
+                'attention_required',
+            ].includes(cashState)"
             class="cash-progress mt-6"
         >
             <div class="cash-progress-row">
@@ -483,11 +725,80 @@ onBeforeUnmount(() => {
                 <span>Осталось внести</span>
                 <strong>{{ formatMoney(remainingAmountMinor) }}</strong>
             </div>
+            <!--
             <div v-if="acceptedBills.length" class="cash-bills-summary">
                 Принято купюр: {{ acceptedBills.length }} · Последняя:
                 {{ formatMoney(acceptedBills.at(-1)?.amountMinor) }}
             </div>
-            <div class="cash-no-change">Терминал не выдаёт сдачу</div>
+            -->
+        </div>
+
+        <div
+            v-if="isPartialPayment"
+            class="cash-partial-payment mt-6"
+        >
+            <div class="cash-partial-timer">
+                <span>Время на выбор</span>
+                <strong>{{ decisionTimeLabel }}</strong>
+            </div>
+            <p>
+                Если не выбрать действие, внесённая сумма будет утеряна!
+            </p>
+            <div class="cash-partial-actions">
+                <button
+                    type="button"
+                    class="__button --green"
+                    :disabled="isResuming"
+                    @click="resumePartialPayment"
+                >
+                    {{ isResuming ? 'Возобновляем…' : 'Продолжить оплату' }}
+                </button>
+                <call-support-component />
+                <button
+                    type="button"
+                    class="__button"
+                    :disabled="isResuming || isCreditingBalance"
+                    @click="creditPartialBalance(session, { force: true })"
+                >
+                    {{
+                        isCreditingBalance
+                            ? 'Зачисляем сумму…'
+                            : 'Зачислить на баланс'
+                    }}
+                </button>
+            </div>
+        </div>
+
+        <div
+            v-if="cashState === 'balance_credit_required'"
+            class="cash-balance-credit mt-6"
+        >
+            <p>Подтверждаем зачисление {{ formatMoney(acceptedAmountMinor) }} на баланс…</p>
+            <button
+                v-if="balanceCreditError"
+                type="button"
+                class="__button"
+                :disabled="isCreditingBalance"
+                @click="creditPartialBalance(session, { force: true })"
+            >
+                Повторить зачисление
+            </button>
+            <call-support-component v-if="balanceCreditError" />
+        </div>
+
+        <div
+            v-if="billSyncError"
+            class="cash-sync-warning mt-4"
+        >
+            {{ billSyncError }}
+        </div>
+
+        <div
+            v-if="balanceCreditError"
+            class="payment-cancel-error mt-4"
+            aria-live="assertive"
+        >
+            {{ balanceCreditError }}
         </div>
 
         <div
@@ -563,10 +874,9 @@ onBeforeUnmount(() => {
 .cash-device-status {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 0.75rem;
     padding: 0.85rem;
-    border: 0.12rem solid rgba(34, 64, 98, 0.14);
     border-radius: 0.85rem;
     background: #ffffff;
     box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.18);
@@ -599,9 +909,11 @@ onBeforeUnmount(() => {
 
 .cash-device-content {
     display: flex;
+    min-width: 0;
     flex-direction: column;
     gap: 0.2rem;
-    font-size: 0.65rem;
+    font-size: 0.75rem;
+    font-weight: 500;
 }
 
 .cash-device-content strong {
@@ -622,7 +934,8 @@ onBeforeUnmount(() => {
     align-items: baseline;
     justify-content: space-between;
     gap: 1rem;
-    font-size: 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 700;
 }
 
 .cash-progress-row strong {
@@ -642,7 +955,7 @@ onBeforeUnmount(() => {
 .cash-bills-summary,
 .cash-connection {
     text-align: center;
-    font-size: 0.65rem;
+    font-size: 0.75rem;
     font-weight: 600;
 }
 
@@ -691,5 +1004,84 @@ onBeforeUnmount(() => {
     text-align: center;
     font-size: 0.7rem;
     font-weight: 600;
+}
+
+.cash-partial-payment,
+.cash-balance-credit {
+    padding: 1rem;
+    border-radius: 0.85rem;
+    background: #ffffff;
+    box-shadow: 0 0.25rem 0.5rem 0 rgba(0, 0, 0, 0.18);
+    text-align: center;
+}
+
+.cash-partial-payment p,
+.cash-balance-credit p {
+    margin: 0.75rem 0 0;
+    font-size: 0.65rem;
+    font-weight: 500;
+}
+
+.cash-device-timer {
+    display: flex;
+    flex: 0 0 auto;
+    order: 3;
+    min-width: 3.3rem;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
+    margin-left: auto;
+    padding: 0.35rem 0.45rem;
+    border: 0.08rem solid rgba(34, 64, 98, 0.28);
+    border-radius: 0.55rem;
+    background: #f7fbff;
+}
+
+.cash-device-timer strong {
+    font-family: monospace;
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.cash-partial-timer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.cash-partial-timer strong {
+    display: flex;
+    min-width: 3.3rem;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: center;
+    padding: 0.35rem 0.45rem;
+    border: 0.08rem solid rgba(34, 64, 98, 0.28);
+    border-radius: 0.55rem;
+    background: #f7fbff;
+    font-family: monospace;
+    font-size: 1.25rem;
+    line-height: 1;
+}
+
+.cash-partial-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.cash-partial-actions .__button,
+.cash-balance-credit .__button {
+    width: 100%;
+}
+
+.cash-sync-warning {
+    color: #9e6711;
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-align: center;
 }
 </style>
