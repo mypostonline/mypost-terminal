@@ -11,6 +11,11 @@ const props = defineProps({
         type: String,
         required: true,
     },
+    description: {
+        type: String,
+        default: 'Отсканируйте QR-код, чтобы открыть заказ, получить ' +
+            'доступные начисления и посмотреть чек.',
+    },
 });
 
 const qrImage = computed(() => getQrImageUrl(props.orderUrl));
@@ -37,15 +42,15 @@ const handleQrError = () => {
 <template>
     <section class="order-qr mt-6" aria-live="polite">
         <h3>Заказ №{{ orderId }}</h3>
-        <p>
-            Отсканируйте QR-код, чтобы открыть заказ, получить доступные
-            начисления и посмотреть чек.
-        </p>
+        <p>{{ description }}</p>
 
         <div
             v-if="qrImage && !qrError"
             class="order-qr-image"
-            :class="{ '--loaded': qrLoaded }"
+            :class="{
+                '--loaded': qrLoaded,
+                'qr-code-frame': qrLoaded,
+            }"
         >
             <img
                 v-show="qrLoaded"
@@ -85,37 +90,9 @@ const handleQrError = () => {
 }
 
 .order-qr-image {
-    position: relative;
     display: grid;
     place-items: center;
     width: min(100%, 17rem);
-    padding: 0.45rem;
-    border-radius: 0.65rem;
-    background: #ffffff;
-}
-
-.order-qr-image::after {
-    position: absolute;
-    inset: 0;
-    border: 0.08rem solid var(--blue-color);
-    border-radius: inherit;
-    box-shadow:
-        0 0 0 0 rgba(57, 119, 196, 0),
-        inset 0 0 0 0 rgba(57, 119, 196, 0);
-    content: '';
-    opacity: 0;
-    pointer-events: none;
-}
-
-.order-qr-image.--loaded::after {
-    opacity: 1;
-    animation: order-qr-pulse 1.8s ease-in-out infinite;
-}
-
-.order-qr-image img {
-    display: block;
-    width: 100%;
-    height: auto;
 }
 
 .order-qr-loading,
@@ -128,28 +105,4 @@ const handleQrError = () => {
     color: #b63d12;
 }
 
-@keyframes order-qr-pulse {
-    0%,
-    100% {
-        border-color: var(--blue-color);
-        border-width: 0.08rem;
-        box-shadow:
-            0 0 0 0 rgba(57, 119, 196, 0),
-            inset 0 0 0 0 rgba(57, 119, 196, 0);
-    }
-
-    50% {
-        border-color: transparent;
-        border-width: 0;
-        box-shadow:
-            0 0 0 0.35rem rgba(57, 119, 196, 0.6),
-            inset 0 0 0 0.14rem rgba(57, 119, 196, 0.4);
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .order-qr-image.--loaded::after {
-        animation: none;
-    }
-}
 </style>

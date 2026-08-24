@@ -277,7 +277,7 @@ export const usePropertyStore = defineStore('propertyStore', () => {
             window.clearInterval(supportTimer);
         }
 
-        secondsLeft.value = 30;
+        secondsLeft.value = 10;
         supportTimer = window.setInterval(() => {
             secondsLeft.value -= 1;
             if (secondsLeft.value <= 0) {

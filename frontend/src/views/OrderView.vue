@@ -69,6 +69,10 @@ const paymentScenario = computed(() => {
 
 const isCardPayment = computed(() => paymentMethodCode.value === 'card');
 const orderQrUrl = computed(() => getOrderUrl(order.value?.id));
+const hasPendingChange = computed(() => {
+    const changeAmount = Number(order.value?.change_amount);
+    return Number.isFinite(changeAmount) && changeAmount > 0;
+});
 const showOrderQr = computed(() => (
     [
         'reconciling',
@@ -148,10 +152,15 @@ const synchronizePaidOrder = async () => {
     paymentState.value = 'reconciling';
 
     try {
+        const paidOrderId = order.value.id;
         await orderStore.paidOrder(
-            order.value.id,
+            paidOrderId,
             Number(storedPaidAmount.value)
         );
+        const refreshedOrder = await orderStore.refreshOrder(paidOrderId);
+        if (!refreshedOrder?.id) {
+            throw new Error('Не удалось обновить оплаченный заказ');
+        }
         reconciliationAttempts = 0;
         paymentError.value = '';
         paymentState.value = 'paid';
@@ -392,10 +401,10 @@ onBeforeUnmount(() => {
                 <svg class="__svg payment-result-icon">
                     <use xlink:href="#clock-ok"></use>
                 </svg>
-                <h2 class="mt-4">Сессия оплаты завершена</h2>
+                <h2 class="mt-4">Заказ отменён</h2>
                 <h3 class="mt-4">
-                    Отсканируйте QR-код заказа для зачисления<br>
-                    внесённой суммы на баланс и просмотра чека
+                    Чтобы зачислить внесённую сумму на баланс,<br>
+                    отсканируйте QR-код заказа
                 </h3>
             </div>
             <order-qr-code
@@ -429,6 +438,11 @@ onBeforeUnmount(() => {
                 v-if="showOrderQr"
                 :order-id="order.id"
                 :order-url="orderQrUrl"
+                :description="
+                    hasPendingChange
+                        ? 'Чтобы зачислить сдачу, отсканируйте QR-код.'
+                        : undefined
+                "
             />
             <div class="mt-16 text-center">
                 <router-link
@@ -505,7 +519,11 @@ onBeforeUnmount(() => {
         -->
 
 
-        <div class="mt-4 text-center" style="font-size: 0.75rem; font-weight: 500; margin-top: 1rem;">
+        <div
+            v-if="![ 'cash_session_completed', 'paid' ].includes(paymentState)"
+            class="mt-4 text-center"
+            style="font-size: 0.75rem; font-weight: 500; margin-top: 1rem;"
+        >
             <input type="checkbox" checked disabled>
             Заплатив здесь, вы принимаете условия сервиса<template
                 v-if="isCardPayment"

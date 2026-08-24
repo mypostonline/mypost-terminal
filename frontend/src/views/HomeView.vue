@@ -94,7 +94,7 @@ onBeforeUnmount(() => {
                         <span>Статус и режим работы</span>
                     </div>
                 </div>
-                <div class="qr">
+                <div class="qr qr-code-frame">
                     <img :src="VITE_QR_SRC" alt="QR-код мобильного сервиса">
                 </div>
             </div>

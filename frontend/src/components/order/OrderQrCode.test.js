@@ -8,9 +8,13 @@ describe('OrderQrCode', () => {
             props: {
                 orderId: 1524,
                 orderUrl: 'https://app.example.com/order/1524',
+                description: 'Чтобы зачислить сдачу, отсканируйте QR-код.',
             },
         });
         expect(wrapper.text()).toContain('Заказ №1524');
+        expect(wrapper.text()).toContain(
+            'Чтобы зачислить сдачу, отсканируйте QR-код.'
+        );
         expect(wrapper.get('img').attributes('src')).toBe(
             'http://localhost:3000/qr/svg?' +
                 'text=https%3A%2F%2Fapp.example.com%2Forder%2F1524'
@@ -19,6 +23,9 @@ describe('OrderQrCode', () => {
         await wrapper.get('img').trigger('load');
 
         expect(wrapper.get('.order-qr-image').classes()).toContain('--loaded');
+        expect(wrapper.get('.order-qr-image').classes()).toContain(
+            'qr-code-frame'
+        );
     });
 
     it('shows an error when the backend QR image cannot be loaded', async () => {

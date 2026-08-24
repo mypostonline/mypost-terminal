@@ -39,10 +39,12 @@ export const useOrderStore = defineStore('orderStore', () => {
         order.value = {};
     };
 
-    const getOrder = async orderId => {
+    const loadOrder = async (orderId, { clearExisting }) => {
         const id = normalizeOrderId(orderId);
         isLoading.value = true;
-        clearOrder();
+        if (clearExisting) {
+            clearOrder();
+        }
 
         try {
             const response = await api(`/orders/${id}`);
@@ -55,6 +57,14 @@ export const useOrderStore = defineStore('orderStore', () => {
             isLoading.value = false;
         }
     };
+
+    const getOrder = orderId => loadOrder(orderId, {
+        clearExisting: true,
+    });
+
+    const refreshOrder = orderId => loadOrder(orderId, {
+        clearExisting: false,
+    });
 
     const createOrder = async (data, { requestId } = {}) => {
         isLoading.value = true;
@@ -114,6 +124,7 @@ export const useOrderStore = defineStore('orderStore', () => {
         setOrder,
         clearOrder,
         getOrder,
+        refreshOrder,
         createOrder,
         paidOrder,
     };
