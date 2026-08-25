@@ -154,78 +154,100 @@ main {
 }
 
 .qr-code-frame {
-    --qr-edge-glow-angle: 0deg;
+    --qr-start-angle: 0deg;
+    --qr-border-angle: 0deg;
+    --qr-ray-opacity: 0;
     position: relative;
     z-index: 0;
-    border: 0.2rem solid var(--primary-color);
+    box-sizing: border-box;
+    border: 0.3rem solid transparent;
     border-radius: 0.75rem;
-    background-color: #ffffff;
-    isolation: isolate;
+    background-image:
+        linear-gradient(#ffffff, #ffffff),
+        conic-gradient(
+            from calc(var(--qr-start-angle) + var(--qr-border-angle)),
+            transparent 0% 76%,
+            rgb(255 59 48 / var(--qr-ray-opacity)) 82%,
+            rgb(52 199 89 / var(--qr-ray-opacity)) 88%,
+            rgb(0 122 255 / var(--qr-ray-opacity)) 94%,
+            transparent 100%
+        ),
+        linear-gradient(
+            rgba(34, 64, 98, 0.18),
+            rgba(34, 64, 98, 0.18)
+        );
+    background-origin: border-box;
+    background-clip: padding-box, border-box, border-box;
+    box-shadow:
+        0 0.2rem 0.55rem rgba(34, 64, 98, 0.16),
+        0 0 0.25rem rgba(34, 64, 98, 0.12);
+    animation:
+        qr-border-ray-run 5.5s linear infinite,
+        qr-border-glow-pulse 5.5s ease-in-out infinite;
 }
 
-.qr-code-frame::after {
-    position: absolute;
-    z-index: -1;
-    inset: -0.55rem;
-    padding: 0.55rem;
-    border-radius: 1.3rem;
-    background: conic-gradient(
-        from var(--qr-edge-glow-angle),
-        transparent 0deg 305deg,
-        rgba(34, 64, 98, 0.06) 316deg,
-        rgba(34, 64, 98, 0.3) 330deg,
-        rgba(34, 64, 98, 1) 341deg,
-        rgba(34, 64, 98, 0.2) 352deg,
-        transparent 360deg
-    );
-    content: '';
-    filter: blur(0.3rem) drop-shadow(0 0 0.35rem rgba(34, 64, 98, 0.55));
-    -webkit-mask:
-        linear-gradient(#000 0 0) content-box,
-        linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    opacity: 0;
-    pointer-events: none;
-    animation: qr-edge-glow-run 4.5s linear infinite;
+@property --qr-border-angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: true;
+}
+
+@property --qr-ray-opacity {
+    syntax: '<number>';
+    initial-value: 0;
+    inherits: true;
+}
+
+@keyframes qr-border-ray-run {
+    0% {
+        --qr-border-angle: 0deg;
+        --qr-ray-opacity: 0;
+    }
+
+    10.909% {
+        --qr-ray-opacity: 1;
+    }
+
+    27.801% {
+        --qr-ray-opacity: 1;
+    }
+
+    38.71%,
+    100% {
+        --qr-border-angle: 360deg;
+        --qr-ray-opacity: 0;
+    }
+}
+
+@keyframes qr-border-glow-pulse {
+    0%,
+    38.71%,
+    100% {
+        box-shadow:
+            0 0.2rem 0.55rem rgba(34, 64, 98, 0.16),
+            0 0 0.25rem rgba(34, 64, 98, 0.12);
+    }
+
+    19.355% {
+        box-shadow:
+            0 0 1rem rgba(255, 59, 48, 0.24),
+            0 0 1.25rem rgba(52, 199, 89, 0.2),
+            0 0 1.5rem rgba(0, 122, 255, 0.3),
+            0 0.25rem 0.65rem rgba(34, 64, 98, 0.18);
+    }
 }
 
 .qr-code-frame > img {
+    position: relative;
+    z-index: 2;
     display: block;
     width: 100%;
     height: auto;
-    border-radius: inherit;
-}
-
-@property --qr-edge-glow-angle {
-    syntax: '<angle>';
-    initial-value: 0deg;
-    inherits: false;
-}
-
-@keyframes qr-edge-glow-run {
-    0% {
-        --qr-edge-glow-angle: 0deg;
-        opacity: 0;
-    }
-
-    6.667% {
-        opacity: 1;
-    }
-
-    26.666% {
-        opacity: 1;
-    }
-
-    33.333%,
-    100% {
-        --qr-edge-glow-angle: 360deg;
-        opacity: 0;
-    }
+    border-radius: 0.55rem;
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .qr-code-frame::after {
+    .qr-code-frame {
         animation: none;
     }
 }
@@ -642,11 +664,14 @@ main {
 }
 
 .order-final-list .label {
-    font-weight: 600;
+    font-weight: 700;
 }
 
 .order-final-list .content {
     padding: 0.25rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
 }
 
 .order-final-list .footer {

@@ -11,6 +11,7 @@ import { usePropertyStore } from "@/stores/propertyStore.js";
 import BannersComponent from "@/components/BannersComponent.vue";
 import CallSupportComponent from "@/components/CallSupportComponent.vue";
 import { isPostAcceptingOrders } from "@/config/postAvailability.js";
+import vRandomQrAnimation from "@/directives/randomQrAnimation.js";
 import {
     formatRemainingMinutes,
     getRemainingMs,
@@ -94,7 +95,7 @@ onBeforeUnmount(() => {
                         <span>Статус и режим работы</span>
                     </div>
                 </div>
-                <div class="qr qr-code-frame">
+                <div v-random-qr-animation class="qr qr-code-frame">
                     <img :src="VITE_QR_SRC" alt="QR-код мобильного сервиса">
                 </div>
             </div>

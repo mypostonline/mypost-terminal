@@ -185,7 +185,7 @@ onBeforeUnmount(() => {
                     <span>{{ getPrice(order.total_amount) }}</span>
                 </div>
             </div>
-            <div v-if="order.cashback_percent > 0" class="footer">
+            <div class="footer">
                 <div class="item">
                     <span>Начислено бонусов*</span>
                     <span>{{ getPrice(order.cashback_amount) }}</span>
@@ -193,7 +193,6 @@ onBeforeUnmount(() => {
             </div>
         </div>
         <div
-            v-if="order.cashback_percent > 0"
             style="font-size: 0.75rem; font-weight: 500; margin-top: 1rem;"
         >
             *Для зачисления бонусов, сканируй QR-код после оплаты заказа

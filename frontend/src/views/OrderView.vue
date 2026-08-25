@@ -12,6 +12,8 @@ import { usePaymentStore } from "@/stores/paymentStore.js";
 import { usePropertyStore } from "@/stores/propertyStore.js";
 import { getPaymentMethodCode } from "@/config/paymentMethods.js";
 import { getOrderUrl } from "@/functions/orderUrl.js";
+import { getPrice } from "@/functions/helpers.js";
+import { calculateCashbackAmount } from "@/functions/cashback.js";
 import {
     CLOSED_ORDER_STATUSES,
     PAID_ORDER_STATUSES,
@@ -68,10 +70,24 @@ const paymentScenario = computed(() => {
 });
 
 const isCardPayment = computed(() => paymentMethodCode.value === 'card');
-const orderQrUrl = computed(() => getOrderUrl(order.value?.id));
-const hasPendingChange = computed(() => {
+const orderQrUrl = computed(() => getOrderUrl(order.value?.uuid));
+const changeAmount = computed(() => {
     const changeAmount = Number(order.value?.change_amount);
-    return Number.isFinite(changeAmount) && changeAmount > 0;
+
+    return Number.isFinite(changeAmount) && changeAmount > 0
+        ? changeAmount
+        : 0;
+});
+const cashbackAmount = computed(() => {
+    const cashbackAmount = Number(order.value?.cashback_amount);
+
+    if (Number.isFinite(cashbackAmount) && cashbackAmount > 0) {
+        return cashbackAmount;
+    }
+    return calculateCashbackAmount(
+        order.value?.total_amount,
+        order.value?.cashback_percent
+    );
 });
 const showOrderQr = computed(() => (
     [
@@ -79,7 +95,6 @@ const showOrderQr = computed(() => (
         'attention',
         'cash_session_completed',
         'paid',
-        'failed',
         'unsupported',
         'closed',
     ].includes(paymentState.value) && Boolean(orderQrUrl.value)
@@ -438,12 +453,30 @@ onBeforeUnmount(() => {
                 v-if="showOrderQr"
                 :order-id="order.id"
                 :order-url="orderQrUrl"
-                :description="
-                    hasPendingChange
-                        ? 'Чтобы зачислить сдачу, отсканируйте QR-код.'
-                        : undefined
-                "
-            />
+            >
+                <template #description>
+                    <template v-if="changeAmount > 0">
+                        Чтобы зачислить сдачу
+                        <strong>{{ getPrice(changeAmount) }}</strong><template
+                            v-if="cashbackAmount > 0"
+                        > и бонусы на сумму
+                            <strong>{{ getPrice(cashbackAmount) }}</strong>
+                        </template>, а также посмотреть <strong>чек</strong>,
+                        отсканируйте <strong>QR-код</strong>.
+                    </template>
+                    <template v-else-if="cashbackAmount > 0">
+                        Чтобы зачислить бонусы на сумму
+                        <strong>{{ getPrice(cashbackAmount) }}</strong> и
+                        посмотреть <strong>чек</strong>, отсканируйте
+                        <strong>QR-код</strong>.
+                    </template>
+                    <template v-else>
+                        Чтобы открыть заказ и посмотреть
+                        <strong>чек</strong>, отсканируйте
+                        <strong>QR-код</strong>.
+                    </template>
+                </template>
+            </order-qr-code>
             <div class="mt-16 text-center">
                 <router-link
                     to="/"
@@ -574,7 +607,7 @@ onBeforeUnmount(() => {
 
 .payment-error {
     font-size: 0.75rem;
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .payment-result-actions {

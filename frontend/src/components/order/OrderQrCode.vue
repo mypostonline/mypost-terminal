@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
 import { getQrImageUrl } from '@/functions/qrUrl.js';
+import vRandomQrAnimation from '@/directives/randomQrAnimation.js';
 
 const props = defineProps({
     orderId: {
@@ -41,11 +42,10 @@ const handleQrError = () => {
 
 <template>
     <section class="order-qr mt-6" aria-live="polite">
-        <h3>Заказ №{{ orderId }}</h3>
-        <p>{{ description }}</p>
-
+        <h2>Заказ №{{ orderId }}</h2>
         <div
             v-if="qrImage && !qrError"
+            v-random-qr-animation
             class="order-qr-image"
             :class="{
                 '--loaded': qrLoaded,
@@ -69,6 +69,9 @@ const handleQrError = () => {
         <div v-else class="order-qr-loading">
             QR-код заказа недоступен
         </div>
+        <p style="font-weight: 600;">
+            <slot name="description">{{ description }}</slot>
+        </p>
     </section>
 </template>
 
@@ -78,10 +81,7 @@ const handleQrError = () => {
     justify-items: center;
     gap: 0.75rem;
     padding: 1rem;
-    border-radius: 0.85rem;
-    background: #ffffff;
     text-align: center;
-    box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.18);
 }
 
 .order-qr h3,

@@ -30,10 +30,6 @@ const cashbackAmount = computed(() => {
     );
 });
 
-const hasCashback = computed(() => {
-    return Number(props.order?.cashback_percent) > 0 ||
-        cashbackAmount.value > 0;
-});
 </script>
 
 <template>
@@ -61,7 +57,7 @@ const hasCashback = computed(() => {
                 <span>{{ getPrice(order.total_amount) }}</span>
             </div>
         </div>
-        <div v-if="hasCashback" class="footer">
+        <div class="footer">
             <div class="item">
                 <span>Начислено бонусов*</span>
                 <span>{{ getPrice(cashbackAmount) }}</span>
@@ -69,7 +65,6 @@ const hasCashback = computed(() => {
         </div>
     </div>
     <div
-        v-if="hasCashback"
         style="font-size: 0.75rem; font-weight: 500; margin-top: 1rem;"
     >
         *Для зачисления бонусов, сканируй QR-код после оплаты заказа

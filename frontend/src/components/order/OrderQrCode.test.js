@@ -4,10 +4,11 @@ import OrderQrCode from './OrderQrCode.vue';
 
 describe('OrderQrCode', () => {
     it('renders a QR code that opens the current order', async () => {
+        const orderUuid = '1c58304f-d1b2-45ff-8189-cd51a8207076';
         const wrapper = mount(OrderQrCode, {
             props: {
                 orderId: 1524,
-                orderUrl: 'https://app.example.com/order/1524',
+                orderUrl: `https://app.example.com/order/${orderUuid}`,
                 description: 'Чтобы зачислить сдачу, отсканируйте QR-код.',
             },
         });
@@ -17,7 +18,8 @@ describe('OrderQrCode', () => {
         );
         expect(wrapper.get('img').attributes('src')).toBe(
             'http://localhost:3000/qr/svg?' +
-                'text=https%3A%2F%2Fapp.example.com%2Forder%2F1524'
+                'text=https%3A%2F%2Fapp.example.com%2Forder%2F' +
+                orderUuid
         );
 
         await wrapper.get('img').trigger('load');
