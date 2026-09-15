@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import './components.css';
+@import './program-options.css';
 @import '../fonts/Inter/stylesheet.css';
 
 :root {
@@ -8,7 +9,7 @@
     --blue-color: #3977C4;
     --green-color: #24a529;
     --red-color: #ff0000;
-    --orange-color: #E85520;
+    --orange-color: #fd4807;
 }
 
 html {
@@ -296,7 +297,7 @@ main {
     z-index: 1;
     width: 50%;
     height: 50%;
-    fill: #ffffff;
+    color: #ffffff;
 }
 
 .post-status .face {
@@ -486,10 +487,7 @@ main {
 }
 
 .property-program-details {
-    color: #ffffff;
-    border-radius: 0.75rem;
     padding: 0.75rem 0.75rem;
-    box-shadow: 0 0.25rem 0.5rem 0 rgba(0, 0, 0, 0.30);
 }
 
 .property-program-details .header {
@@ -557,9 +555,7 @@ main {
 }
 
 .property-addons .addon {
-    color: #ffffff;
     font-size: 0.7rem;
-    border-radius: 0.75rem;
     padding: 0.5rem;
     cursor: pointer;
     display: flex;
@@ -568,7 +564,6 @@ main {
     gap: 0.5rem;
     align-items: center;
     justify-content: space-between;
-    box-shadow: 0 0.25rem 0.5rem 0 rgba(0, 0, 0, 0.30);
 }
 
 .property-addons .addon:disabled {
@@ -606,6 +601,7 @@ main {
 
 .property-addons .addon .content .name {
     font-size: 0.875em;
+    font-weight: 700;
     line-height: 1.2em;
 }
 
@@ -630,6 +626,7 @@ main {
     z-index: 1;
     flex-shrink: 0;
     white-space: nowrap;
+    font-weight: 500;
 }
 
 /*
@@ -640,6 +637,56 @@ main {
 
 .property-addons .addon.--active .image {
     background-color: var(--green-color);
+}
+
+/* Shared surface for program cards and the selected program screen. */
+.program-card-surface {
+    position: relative;
+    isolation: isolate;
+    border: 1px solid #d8ddf0;
+    border-radius: 0.85rem;
+    background: #ffffff;
+    color: #000000;
+    box-shadow: 0 0.15rem 0.45rem rgb(62 78 150 / 10%), inset 0 0 0 1px rgb(255 255 255 / 65%);
+}
+
+.program-card-surface::before,
+.program-card-surface::after {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    pointer-events: none;
+    inset: 0;
+    border-radius: inherit;
+    opacity: var(--gradient-opacity, 0.22);
+}
+
+.program-card-surface::before {
+    background: linear-gradient(140deg, #ffffff 0%, color-mix(in srgb, #224062 65%, white) 50%, #224062 100%);
+}
+
+.program-card-surface::after {
+    background:
+        radial-gradient(ellipse at 8% -70%, transparent 66%, color-mix(in srgb, #224062 25%, transparent) 66.3%, color-mix(in srgb, #224062 35%, transparent) 75%, transparent 75.3%),
+        radial-gradient(ellipse at 0% -35%, transparent 68%, color-mix(in srgb, #224062 35%, transparent) 68.3%, color-mix(in srgb, #224062 25%, transparent) 81%, transparent 81.3%);
+}
+
+.property-program-details.program-card-surface {
+    --gradient-opacity: 0.4;
+}
+
+.property-program-details.program-card-surface .header,
+.property-program-details.program-card-surface .footer {
+    border-color: rgb(34 64 98 / 20%);
+}
+
+.property-addons .addon.program-card-surface.--active {
+    border-color: var(--green-color);
+}
+
+.property-addons .addon.program-card-surface:focus-visible {
+    outline: 3px solid var(--primary-color);
+    outline-offset: 3px;
 }
 
 
@@ -668,13 +715,24 @@ main {
 }
 
 .order-final-list .content {
+    max-height: min(10rem, 30svh);
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scrollbar-width: thin;
     padding: 0.25rem 0;
     display: flex;
     flex-direction: column;
     gap: 0.1rem;
 }
 
+.order-final-list .content > * {
+    flex-shrink: 0;
+}
+
 .order-final-list .footer {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
     padding-top: 0.25rem;
     border-top: 1px solid;
 }

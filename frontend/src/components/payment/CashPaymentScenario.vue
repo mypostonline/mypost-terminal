@@ -1,7 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import OrderSummaryComponent from "@/components/order/OrderSummaryComponent.vue";
-import CallSupportComponent from "@/components/CallSupportComponent.vue";
 import localApi from "@/functions/localApi.js";
 import {
     creditCashToBalance,
@@ -565,6 +564,47 @@ const resumePayment = async () => {
     }
 };
 
+// Keep action availability with the payment state; layout belongs to OrderView.
+const actions = computed(() => {
+    const result = [];
+    if (isPartialPayment.value) {
+        result.push({
+            id: 'resume',
+            icon: 'session',
+            label: isResuming.value ? 'Возобновляем…' : 'Продолжить оплату',
+            primary: true,
+            disabled: isResuming.value,
+            run: resumePartialPayment,
+        }, {
+            id: 'credit-balance',
+            icon: 'wallet',
+            label: isCreditingBalance.value ? 'Зачисляем сумму…' : 'Зачислить на баланс',
+            disabled: isResuming.value || isCreditingBalance.value,
+            run: () => creditPartialBalance(session.value, { force: true }),
+        });
+    }
+    if (cashState.value === 'balance_credit_required' && balanceCreditError.value) {
+        result.push({
+            id: 'retry-credit',
+            icon: 'wallet',
+            label: 'Повторить зачисление',
+            disabled: isCreditingBalance.value,
+            run: () => creditPartialBalance(session.value, { force: true }),
+        });
+    }
+    if (showCancelAction.value) {
+        result.push({
+            id: 'cancel',
+            label: isCanceling.value ? 'Отменяем оплату…' : 'Отменить и начать заново',
+            disabled: isCanceling.value,
+            run: cancelPayment,
+        });
+    }
+    return result;
+});
+
+defineExpose({ actions });
+
 onMounted(() => {
     connectSocket();
     countdownTimer = window.setInterval(() => {
@@ -632,11 +672,11 @@ onBeforeUnmount(() => {
             </span>
 
             <span
-                v-if="cashState === 'accepting'"
+                v-if="cashState === 'accepting' || isPartialPayment"
                 class="cash-device-timer"
-                aria-label="Оставшееся время на внесение купюры"
+                :aria-label="isPartialPayment ? 'Оставшееся время на выбор действия' : 'Оставшееся время на внесение купюры'"
             >
-                <strong>{{ acceptanceTimeLabel }}</strong>
+                <strong>{{ isPartialPayment ? decisionTimeLabel : acceptanceTimeLabel }}</strong>
             </span>
 
             <span v-if="cashState === 'accepting'" class="cash-device-content">
@@ -734,56 +774,10 @@ onBeforeUnmount(() => {
         </div>
 
         <div
-            v-if="isPartialPayment"
-            class="cash-partial-payment mt-6"
-        >
-            <div class="cash-partial-timer">
-                <span>Время на выбор</span>
-                <strong>{{ decisionTimeLabel }}</strong>
-            </div>
-            <p>
-                Если не выбрать действие, внесённая сумма будет утеряна!
-            </p>
-            <div class="cash-partial-actions">
-                <button
-                    type="button"
-                    class="__button --green"
-                    :disabled="isResuming"
-                    @click="resumePartialPayment"
-                >
-                    {{ isResuming ? 'Возобновляем…' : 'Продолжить оплату' }}
-                </button>
-                <call-support-component />
-                <button
-                    type="button"
-                    class="__button"
-                    :disabled="isResuming || isCreditingBalance"
-                    @click="creditPartialBalance(session, { force: true })"
-                >
-                    {{
-                        isCreditingBalance
-                            ? 'Зачисляем сумму…'
-                            : 'Зачислить на баланс'
-                    }}
-                </button>
-            </div>
-        </div>
-
-        <div
             v-if="cashState === 'balance_credit_required'"
             class="cash-balance-credit mt-6"
         >
             <p>Подтверждаем зачисление {{ formatMoney(acceptedAmountMinor) }} на баланс…</p>
-            <button
-                v-if="balanceCreditError"
-                type="button"
-                class="__button"
-                :disabled="isCreditingBalance"
-                @click="creditPartialBalance(session, { force: true })"
-            >
-                Повторить зачисление
-            </button>
-            <call-support-component v-if="balanceCreditError" />
         </div>
 
         <div
@@ -819,7 +813,7 @@ onBeforeUnmount(() => {
                     v-for="amountRub in mockAmountsRub"
                     :key="amountRub"
                     type="button"
-                    class="__button"
+                    class="__button --small"
                     :disabled="isMockInserting"
                     @click="insertMockBill(amountRub * 100)"
                 >
@@ -828,7 +822,7 @@ onBeforeUnmount(() => {
                 <button
                     v-if="remainingAmountMinor > 0"
                     type="button"
-                    class="__button --green"
+                    class="__button --green --small"
                     :disabled="isMockInserting"
                     @click="insertMockBill(remainingAmountMinor)"
                 >
@@ -840,20 +834,6 @@ onBeforeUnmount(() => {
             </div>
         </div>
 
-        <div v-if="showCancelAction" class="payment-cancel-actions mt-6">
-            <button
-                type="button"
-                class="__button"
-                :disabled="isCanceling"
-                @click="cancelPayment"
-            >
-                {{
-                    isCanceling
-                        ? 'Отменяем оплату…'
-                        : 'Отменить и начать заново'
-                }}
-            </button>
-        </div>
         <div
             v-if="cancelError"
             class="payment-cancel-error mt-4"
@@ -868,7 +848,7 @@ onBeforeUnmount(() => {
 .payment-status-icon {
     width: 4rem;
     height: 4rem;
-    fill: var(--green-color);
+    color: var(--green-color);
 }
 
 .cash-device-status {
@@ -904,7 +884,7 @@ onBeforeUnmount(() => {
 .cash-device-icon .__svg {
     width: 1.75rem;
     height: 1.75rem;
-    fill: #ffffff;
+    color: #ffffff;
 }
 
 .cash-device-content {
@@ -978,25 +958,16 @@ onBeforeUnmount(() => {
     font-size: 0.7rem;
 }
 
-.cash-test-actions {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 0.5rem;
-}
-
-.cash-test-actions .__button {
-    min-width: 4.5rem;
-}
-
 .cash-test-error {
     color: #b63d12;
     font-weight: 600;
 }
 
-.payment-cancel-actions {
+.cash-test-actions {
     display: flex;
+    flex-wrap: wrap;
     justify-content: center;
+    gap: 0.5rem;
 }
 
 .payment-cancel-error {
@@ -1006,7 +977,6 @@ onBeforeUnmount(() => {
     font-weight: 600;
 }
 
-.cash-partial-payment,
 .cash-balance-credit {
     padding: 1rem;
     border-radius: 0.85rem;
@@ -1015,7 +985,6 @@ onBeforeUnmount(() => {
     text-align: center;
 }
 
-.cash-partial-payment p,
 .cash-balance-credit p {
     margin: 0.75rem 0 0;
     font-size: 0.65rem;
@@ -1042,40 +1011,6 @@ onBeforeUnmount(() => {
     font-family: monospace;
     font-size: 1rem;
     line-height: 1;
-}
-
-.cash-partial-timer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-}
-
-.cash-partial-timer strong {
-    display: flex;
-    min-width: 3.3rem;
-    box-sizing: border-box;
-    align-items: center;
-    justify-content: center;
-    padding: 0.35rem 0.45rem;
-    border: 0.08rem solid rgba(34, 64, 98, 0.28);
-    border-radius: 0.55rem;
-    background: #f7fbff;
-    font-family: monospace;
-    font-size: 1.25rem;
-    line-height: 1;
-}
-
-.cash-partial-actions {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 0.75rem;
-    margin-top: 1rem;
-}
-
-.cash-partial-actions .__button,
-.cash-balance-credit .__button {
-    width: 100%;
 }
 
 .cash-sync-warning {

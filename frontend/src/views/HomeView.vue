@@ -64,7 +64,7 @@ onBeforeUnmount(() => {
 
 <template>
 
-    <main>
+    <main class="home-view">
         <banners-component />
         <div class="scan-qr">
             <h1 class="title">Сканируй QR-код,<br> Ваш терминал в телефоне!</h1>
@@ -156,7 +156,7 @@ onBeforeUnmount(() => {
         <template v-else-if="isInitialized && (!isOnline || !isNetwork)">
             <div class="backoff">
                 <div class="image">
-                    <svg class="__svg" style="fill: #E8541E;">
+                    <svg class="__svg" style="color: #E8541E;">
                         <use xlink:href="#offline"></use>
                     </svg>
                 </div>
@@ -168,7 +168,7 @@ onBeforeUnmount(() => {
         <template v-else-if="isInitialized">
             <div class="backoff">
                 <div class="image">
-                    <svg class="__svg" style="fill: #E8541E;">
+                    <svg class="__svg" style="color: #E8541E;">
                         <use xlink:href="#offline"></use>
                     </svg>
                 </div>
@@ -185,6 +185,20 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.home-view {
+    min-width: 0;
+}
+
+.home-view .scan-qr-items {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.home-view .scan-qr-items > *,
+.home-view .items > div > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
 .post-unavailable {
     padding: 0.65rem;
     border-radius: 0.65rem;

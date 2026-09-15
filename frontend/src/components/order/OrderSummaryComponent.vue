@@ -37,7 +37,7 @@ const cashbackAmount = computed(() => {
         <div class="header">
             <div class="title">Итоговый список</div>
         </div>
-        <div class="content">
+        <div class="content" tabindex="0" role="region" aria-label="Позиции заказа">
             <template v-if="program">
                 <div class="label">Режим:</div>
                 <div class="item">
@@ -52,12 +52,12 @@ const cashbackAmount = computed(() => {
                     <span>{{ getPrice(addon.price) }}</span>
                 </div>
             </template>
+        </div>
+        <div class="footer">
             <div class="item label" style="color: var(--green-color);">
                 <span>Итого:</span>
                 <span>{{ getPrice(order.total_amount) }}</span>
             </div>
-        </div>
-        <div class="footer">
             <div class="item">
                 <span>Начислено бонусов*</span>
                 <span>{{ getPrice(cashbackAmount) }}</span>

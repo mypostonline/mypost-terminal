@@ -8,8 +8,9 @@ import { usePaymentCapabilitiesStore } from "@/stores/paymentCapabilitiesStore.j
 import { getPrice } from "@/functions/helpers.js";
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import CallSupportComponent from "@/components/CallSupportComponent.vue";
+import FixedActions from "@/components/FixedActions.vue";
 import OfferLinkComponent from "@/components/OfferLinkComponent.vue";
-import { getConfiguredPaymentMethods } from "@/config/paymentMethods.js";
+import { getConfiguredPaymentMethods, SBP_PAYMENT_METHOD } from "@/config/paymentMethods.js";
 import { isPostAcceptingOrders } from "@/config/postAvailability.js";
 
 const router = useRouter();
@@ -30,11 +31,14 @@ const selectedPaymentMethod = ref(null);
 const createError = ref('');
 let capabilitiesTimer = null;
 
-const paymentMethods = computed(() => getConfiguredPaymentMethods(
+const paymentMethodOrder = ['card', 'sbp', 'cash'];
+const paymentMethods = computed(() => [...getConfiguredPaymentMethods(
     post.value,
     runtimePaymentMethods.value
-).map(method => {
-    if (isPostAcceptingOrders(post.value)) {
+), SBP_PAYMENT_METHOD].sort((a, b) => (
+    paymentMethodOrder.indexOf(a.code) - paymentMethodOrder.indexOf(b.code)
+)).map(method => {
+    if (method.code === 'sbp' || isPostAcceptingOrders(post.value)) {
         return method;
     }
     return {
@@ -151,9 +155,9 @@ onBeforeUnmount(() => {
 
 <template>
 
-    <main>
+    <main class="preorder-view">
         <div class="text-center">
-            <svg class="__svg" style="fill: var(--green-color); width: 4rem; height: 4rem;">
+            <svg class="__svg" style="color: var(--green-color); width: 4rem; height: 4rem;">
                 <use xlink:href="#clock-waiting"></use>
             </svg>
             <h2 class="mt-4">В заказе</h2>
@@ -162,7 +166,7 @@ onBeforeUnmount(() => {
             <div class="header">
                 <div class="title">Итоговый список</div>
             </div>
-            <div class="content">
+            <div class="content" tabindex="0" role="region" aria-label="Позиции заказа">
                 <div class="label">Режим:</div>
                 <div class="item">
                     <span>{{ program.name }}</span>
@@ -180,12 +184,12 @@ onBeforeUnmount(() => {
                         </div>
                     </template>
                 </template>
+            </div>
+            <div class="footer">
                 <div class="item label" style="color: var(--green-color);">
                     <span>Итого:</span>
                     <span>{{ getPrice(order.total_amount) }}</span>
                 </div>
-            </div>
-            <div class="footer">
                 <div class="item">
                     <span>Начислено бонусов*</span>
                     <span>{{ getPrice(order.cashback_amount) }}</span>
@@ -197,86 +201,54 @@ onBeforeUnmount(() => {
         >
             *Для зачисления бонусов, сканируй QR-код после оплаты заказа
         </div>
-        <section class="payment-choice mt-6">
-            <h2 class="payment-choice-title">Выберите способ оплаты</h2>
-            <div
-                v-if="paymentMethods.length"
-                class="payment-methods"
-                :class="{ '--single': paymentMethods.length === 1 }"
-            >
-                <button
+        <section class="payment-choice mt-6" aria-labelledby="payment-choice-title">
+            <h2 id="payment-choice-title" class="payment-choice-title">Выберите способ оплаты</h2>
+            <div v-if="paymentMethods.length" class="payment-methods">
+                <div
                     v-for="paymentMethod in paymentMethods"
                     :key="paymentMethod.code"
-                    class="payment-method-button"
-                    :class="`--${paymentMethod.code}`"
-                    type="button"
-                    :disabled="
-                        isCreatingOrder ||
-                        isCheckingPayments ||
-                        !paymentMethod.available
-                    "
-                    @click="createOrder(paymentMethod)"
                 >
-                    <span class="payment-method-icon">
-                        <svg class="__svg">
-                            <use :xlink:href="`#${paymentMethod.icon}`"></use>
-                        </svg>
-                    </span>
-                    <span class="payment-method-content">
-                        <span class="payment-method-title">
+                    <button
+                        class="__button --tile"
+                        type="button"
+                        :aria-label="`${selectedPaymentMethod === paymentMethod.code ? 'Создаём заказ…' : paymentMethod.actionLabel}: ${getPrice(order.total_amount)}`"
+                        :aria-describedby="!paymentMethod.available && paymentMethod.unavailableLabel !== '' ? `payment-${paymentMethod.code}-status` : undefined"
+                        :disabled="
+                            isCreatingOrder ||
+                            isCheckingPayments ||
+                            !paymentMethod.available
+                        "
+                        @click="createOrder(paymentMethod)"
+                    >
+                        <span class="__button-icon">
+                            <svg class="__svg" aria-hidden="true">
+                                <use :xlink:href="`#${paymentMethod.icon}`"></use>
+                            </svg>
+                        </span>
+                        <span>
                             {{
                                 selectedPaymentMethod === paymentMethod.code
                                     ? 'Создаём заказ…'
-                                    : paymentMethod.actionLabel
+                                    : paymentMethod.label
                             }}
                         </span>
-                        <span class="payment-method-description">
-                            {{
-                                paymentMethod.available
-                                    ? paymentMethod.description
-                                    : paymentMethod.unavailableLabel || 'Временно недоступно'
-                            }}
-                        </span>
-                        <span class="payment-method-amount">{{ getPrice(order.total_amount) }}</span>
-                    </span>
-                </button>
+                    </button>
+                    <p
+                        v-if="!paymentMethod.available && paymentMethod.unavailableLabel !== ''"
+                        :id="`payment-${paymentMethod.code}-status`"
+                        class="payment-method-description"
+                    >
+                        {{ paymentMethod.unavailableLabel || 'Временно недоступно' }}
+                    </p>
+                </div>
             </div>
-            <div v-else class="payment-methods-empty">
+            <div v-if="!paymentMethods.some(method => method.available)" class="payment-methods-empty mt-4">
                 Оплата на этом терминале временно недоступна
             </div>
-            <div
-                v-if="createError"
-                class="payment-error mt-4"
-                role="alert"
-            >
+            <div v-if="createError" class="payment-error mt-4" role="alert">
                 {{ createError }}
             </div>
         </section>
-
-        <!--<div class="preorder-navigation"></div>-->
-        <div class="mt-6" style="display: grid; grid-template-columns: 1fr 2fr 1fr; align-items: center;">
-            <div>
-                <router-link
-                    :to="`/programs/${program.id}`"
-                    class="__button --small"
-                >
-                    <svg class="__svg" style="fill: var(--primary-color); transform: rotate(180deg);">
-                        <use xlink:href="#arrow"></use>
-                    </svg>
-                </router-link>
-            </div>
-            <div></div>
-            <div class="flex justify-end">
-                <call-support-component :show-text="false" />
-            </div>
-        </div>
-
-        <!--
-        <div class="mt-6 text-center">
-            <call-support-component />
-        </div>
-        -->
-
         <div class="mt-4 text-center" style="font-size: 0.75rem; font-weight: 500; margin-top: 1rem;">
             <input type="checkbox" checked disabled>
             Выбирая оплату, вы принимаете условия сервиса
@@ -290,11 +262,45 @@ onBeforeUnmount(() => {
             . При оплате картой также действуют условия
             платёжного агрегатора.
         </div>
+
+        <fixed-actions label="Действия с предзаказом">
+            <template #leading>
+                <router-link
+                    v-if="!isCreatingOrder"
+                    :to="`/programs/${program.id}`"
+                    class="__button"
+                    aria-label="Назад"
+                    title="Назад"
+                >
+                    <svg class="__svg --back" aria-hidden="true">
+                        <use xlink:href="#arrow"></use>
+                    </svg>
+                </router-link>
+                <button v-else class="__button" type="button" aria-label="Назад" title="Назад" disabled>
+                    <svg class="__svg --back" aria-hidden="true">
+                        <use xlink:href="#arrow"></use>
+                    </svg>
+                </button>
+            </template>
+            <template #trailing>
+                <call-support-component :show-text="false" />
+            </template>
+        </fixed-actions>
     </main>
 
 </template>
 
 <style scoped>
+
+.preorder-view,
+.preorder-view .order-final-list .item > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.preorder-view .order-final-list .item {
+    flex-wrap: wrap;
+}
 
 .payment-choice-title {
     margin-bottom: 0.75rem;
@@ -303,96 +309,18 @@ onBeforeUnmount(() => {
 
 .payment-methods {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
     gap: 0.75rem;
-}
-
-.payment-methods.--single {
-    grid-template-columns: minmax(0, 18rem);
-    justify-content: center;
-}
-
-.payment-method-button {
-    display: grid;
-    grid-template-columns: 3.25rem minmax(0, 1fr);
-    align-items: center;
-    gap: 0.75rem;
-    width: 100%;
-    min-height: 6.5rem;
-    padding: 0.75rem;
-    border-radius: 0.85rem;
-    color: var(--primary-color);
-    background: #ffffff;
-    box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.18);
-    text-align: left;
-    cursor: pointer;
-    transition: border-color 0.2s ease-out,
-    box-shadow 0.2s ease-out,
-    transform 0.1s ease-out;
-}
-
-.payment-method-button:focus-visible {
-    border-color: var(--green-color);
-    box-shadow: 0 0.3rem 0.65rem rgba(0, 0, 0, 0.24);
-    outline: none;
-}
-
-.payment-method-button:active {
-    transform: translateY(0.08rem);
-}
-
-.payment-method-button:disabled {
-    opacity: 0.55;
-    cursor: default;
-    transform: none;
-}
-
-.payment-method-icon {
-    display: grid;
-    place-items: center;
-    width: 3.25rem;
-    height: 3.25rem;
-    border-radius: 50%;
-    background: var(--green-color);
-}
-
-.payment-method-icon .__svg {
-    width: 2rem;
-    height: 2rem;
-    fill: #ffffff;
-}
-
-.payment-method-button.--cash .payment-method-icon .__svg {
-    width: 1.75rem;
-    height: 1.75rem;
-}
-
-.payment-method-content {
-    display: flex;
-    min-width: 0;
-    flex-direction: column;
-    align-items: flex-start;
-}
-
-.payment-method-title {
-    font-size: 0.8rem;
-    font-weight: 700;
-    line-height: 1.2;
 }
 
 .payment-method-description {
     margin-top: 0.2rem;
-    font-size: 0.5rem;
+    font-size: clamp(12px, 0.5rem, 18px);
     font-weight: 500;
     line-height: 1.25;
     opacity: 0.75;
-}
-
-.payment-method-amount {
-    margin-top: 0.45rem;
-    color: var(--green-color);
-    font-size: 0.85rem;
-    font-weight: 700;
+    text-align: center;
 }
 
 .payment-methods-empty {
@@ -412,11 +340,6 @@ onBeforeUnmount(() => {
     font-size: 0.65rem;
     font-weight: 600;
     text-align: center;
-}
-
-.preorder-navigation {
-    display: flex;
-    margin-top: 1.5rem;
 }
 
 </style>

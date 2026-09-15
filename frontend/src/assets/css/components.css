@@ -32,11 +32,77 @@
     }
 
     .__button.--medium {
-        min-width: 13rem;
+        --button-width: auto;
+        --button-min-width: 13rem;
+        width: var(--button-width);
+        min-width: var(--button-min-width);
     }
 
     .__button.--small {
         min-width: initial;
+    }
+
+    .__button.--block {
+        width: 100%;
+        min-width: 0;
+        min-height: 48px;
+        font-size: clamp(16px, 0.9rem, 32px);
+        line-height: 1.25;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    .__button.--block:focus-visible {
+        outline: 2px solid var(--primary-color);
+        outline-offset: 3px;
+    }
+
+    .__button.--tile {
+        flex-direction: column;
+        gap: 0.45rem;
+        width: 100%;
+        min-width: 0;
+        padding: 0.65rem 0.4rem;
+        border: clamp(1px, 0.05rem, 2px) solid #b4c4d5;
+        background: #ffffff;
+        font-size: clamp(14px, 0.7rem, 25px);
+        line-height: 1.25;
+        overflow-wrap: anywhere;
+    }
+
+    .__button.--tile .__button-icon {
+        display: grid;
+        place-items: center;
+        width: clamp(64px, 3.25rem, 120px);
+        height: clamp(64px, 3.25rem, 120px);
+        max-width: 100%;
+        flex-shrink: 0;
+        color: var(--primary-color);
+        transition: transform 0.2s ease-out;
+    }
+
+    .__button.--tile .__svg {
+        width: 80%;
+        height: 80%;
+        transform: none;
+    }
+
+    .__button.--tile:focus-visible {
+        outline: 2px solid var(--primary-color);
+        outline-offset: 3px;
+    }
+
+    .__button.--tile:not(:disabled):active .__button-icon {
+        transform: scale(0.96);
+    }
+
+    .__button.--tile:disabled {
+        background-color: #ffffff !important;
+        border-color: #d6dee7 !important;
+    }
+
+    .__button.--tile:disabled > * {
+        opacity: 0.5;
     }
 
     .__button:disabled {
@@ -45,13 +111,30 @@
         border-color: #bababa !important;
     }
     .__button .__svg {
-        transform: scale(1.15);
+        flex-shrink: 0;
+        width: 1.25em;
+        height: 1.25em;
     }
 
     .__button.--green {
         color: #ffffff;
         background-color: var(--green-color);
         border-color: var(--green-color);
+    }
+
+    .__button.--white,
+    .__button:has(.__svg):not(.--filled) {
+        color: var(--primary-color);
+        background-color: #ffffff;
+    }
+
+    .__button.--green:has(.__svg):not(.--filled) {
+        border-color: var(--primary-color);
+    }
+
+    .__button.--white:disabled,
+    .__button:has(.__svg):not(.--filled):disabled {
+        background-color: #ffffff !important;
     }
 
     .__svg {
@@ -61,6 +144,7 @@
         box-sizing: border-box;
         height: 1em;
         width: 1em;
+        fill: currentColor;
         transition: all 0.2s ease-out;
     }
 

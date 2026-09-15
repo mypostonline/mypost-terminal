@@ -9,7 +9,6 @@ import { useRoute, useRouter } from "vue-router";
 import { storeToRefs } from "pinia";
 import { useOrderStore } from "@/stores/orderStore.js";
 import { usePaymentStore } from "@/stores/paymentStore.js";
-import { usePropertyStore } from "@/stores/propertyStore.js";
 import { getPaymentMethodCode } from "@/config/paymentMethods.js";
 import { getOrderUrl } from "@/functions/orderUrl.js";
 import { getPrice } from "@/functions/helpers.js";
@@ -21,16 +20,13 @@ import {
     getOrderStatus,
 } from "@/config/orderStatuses.js";
 import CallSupportComponent from "@/components/CallSupportComponent.vue";
-import OfferLinkComponent from "@/components/OfferLinkComponent.vue";
+import FixedActions from "@/components/FixedActions.vue";
 import OrderQrCode from "@/components/order/OrderQrCode.vue";
 import CardPaymentScenario from "@/components/payment/CardPaymentScenario.vue";
 import CashPaymentScenario from "@/components/payment/CashPaymentScenario.vue";
 
 const route = useRoute();
 const router = useRouter();
-
-const propertyStore = usePropertyStore();
-const { property } = storeToRefs(propertyStore);
 
 const orderStore = useOrderStore();
 const { order } = storeToRefs(orderStore);
@@ -45,6 +41,7 @@ const {
 const isInitialized = ref(false);
 const paymentState = ref('loading');
 const paymentError = ref('');
+const paymentControls = ref(null);
 const resumeExistingDeviceSession = ref(
     paymentStore.matchesOrder(route.params.orderId) &&
     [ 'processing', 'attention_required' ].includes(
@@ -69,7 +66,6 @@ const paymentScenario = computed(() => {
     return paymentScenarios[paymentMethodCode.value];
 });
 
-const isCardPayment = computed(() => paymentMethodCode.value === 'card');
 const orderQrUrl = computed(() => getOrderUrl(order.value?.uuid));
 const changeAmount = computed(() => {
     const changeAmount = Number(order.value?.change_amount);
@@ -104,6 +100,24 @@ const canRetryPayment = computed(() => {
         paymentState.value
     );
 });
+const paymentActions = computed(() => (
+    paymentState.value === 'processing'
+        ? paymentControls.value?.actions || []
+        : []
+));
+const inlineActionIds = new Set(['resume', 'credit-balance']);
+const inlinePaymentActions = computed(() => paymentActions.value.filter(action => inlineActionIds.has(action.id)));
+const panelPaymentActions = computed(() => paymentActions.value.filter(action => !inlineActionIds.has(action.id)));
+const canReturnHome = computed(() => (
+    canRetryPayment.value ||
+    [ 'cash_session_completed', 'paid' ].includes(paymentState.value)
+));
+
+const clearFinishedPayment = () => {
+    if ([ 'cash_session_completed', 'paid' ].includes(paymentState.value)) {
+        paymentStore.clear();
+    }
+};
 
 const failureTitle = computed(() => {
     if (paymentState.value === 'unsupported') {
@@ -369,10 +383,11 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <main v-if="isInitialized && order.id">
+    <main v-if="isInitialized && order.id" class="order-view">
         <component
             v-if="paymentState === 'processing' && paymentScenario"
             :is="paymentScenario"
+            ref="paymentControls"
             :order="order"
             :resume-only="resumeExistingDeviceSession"
             @approved="handlePaymentApproved"
@@ -427,15 +442,6 @@ onBeforeUnmount(() => {
                 :order-id="order.id"
                 :order-url="orderQrUrl"
             />
-            <div class="mt-16 text-center">
-                <router-link
-                    to="/"
-                    class="__button --green"
-                    @click="paymentStore.clear"
-                >
-                    На главную
-                </router-link>
-            </div>
         </template>
 
         <template v-else-if="paymentState === 'paid'">
@@ -477,15 +483,6 @@ onBeforeUnmount(() => {
                     </template>
                 </template>
             </order-qr-code>
-            <div class="mt-16 text-center">
-                <router-link
-                    to="/"
-                    class="__button --green"
-                    @click="paymentStore.clear"
-                >
-                    На главную
-                </router-link>
-            </div>
         </template>
 
         <template v-else>
@@ -494,11 +491,10 @@ onBeforeUnmount(() => {
                     <use xlink:href="#clock-error"></use>
                 </svg>
                 <h2 class="mt-4">{{ failureTitle }}</h2>
-                <div class="payment-error mt-4">{{ paymentError }}</div>
             </div>
 
             <div class="post-info mt-16">
-                <div class="post-status" style="max-width: 10rem;">
+                <div class="post-status" style="max-width: 14rem;">
                     <svg class="__svg shape" style="fill: #E8541E;">
                         <use xlink:href="#shape"></use>
                     </svg>
@@ -507,6 +503,9 @@ onBeforeUnmount(() => {
                     </svg>
                 </div>
             </div>
+            <div v-if="paymentError" class="text-center">
+                <div class="payment-error mt-4">{{ paymentError }}</div>
+            </div>
 
             <order-qr-code
                 v-if="showOrderQr"
@@ -514,25 +513,6 @@ onBeforeUnmount(() => {
                 :order-url="orderQrUrl"
             />
 
-            <div
-                class="payment-result-actions mt-16"
-                :class="{ '--single': !canRetryPayment }"
-            >
-                <router-link to="/" class="__button --green">
-                    На главную
-                </router-link>
-
-                <!--
-                <router-link
-                    v-if="canRetryPayment"
-                    :to="`/programs/${order.program_id}`"
-                    class="__button"
-                >
-                    Выбрать оплату заново
-                </router-link>
-                -->
-                <call-support-component />
-            </div>
         </template>
 
         <order-qr-code
@@ -545,52 +525,82 @@ onBeforeUnmount(() => {
             :order-url="orderQrUrl"
         />
 
-        <!--
-        <div class="mt-6 text-center">
-            <call-support-component />
-        </div>
-        -->
-
-
-        <div
-            v-if="![ 'cash_session_completed', 'paid' ].includes(paymentState)"
-            class="mt-4 text-center"
-            style="font-size: 0.75rem; font-weight: 500; margin-top: 1rem;"
-        >
-            <input type="checkbox" checked disabled>
-            Заплатив здесь, вы принимаете условия сервиса<template
-                v-if="isCardPayment"
-            >, платёжного агрегатора</template><template
-                v-if="property?.proprietor?.public_offer_url"
-            > и <offer-link-component
-                :url="property.proprietor.public_offer_url"
-            /></template>.
+        <div v-if="inlinePaymentActions.length" class="order-payment-actions" role="group" aria-label="Действия с внесённой суммой">
+            <button
+                v-for="action in inlinePaymentActions"
+                :key="action.id"
+                type="button"
+                class="__button --tile"
+                :disabled="action.disabled"
+                @click="action.run()"
+            >
+                <span class="__button-icon">
+                    <svg class="__svg" aria-hidden="true"><use :xlink:href="`#${action.icon}`" /></svg>
+                </span>
+                <span>{{ action.label }}</span>
+            </button>
         </div>
     </main>
 
-    <main v-else-if="isInitialized" class="text-center">
+    <main v-else-if="isInitialized" class="order-view text-center">
         <svg class="__svg payment-result-icon --error">
             <use xlink:href="#clock-error"></use>
         </svg>
         <h2 class="mt-4">Не удалось открыть заказ</h2>
         <div class="payment-error mt-4">{{ paymentError }}</div>
-        <div class="mt-16">
-            <router-link to="/" class="__button --green">
-                На главную
-            </router-link>
-        </div>
     </main>
+
+    <fixed-actions v-if="isInitialized" label="Действия с заказом">
+        <router-link
+            v-if="canReturnHome"
+            to="/"
+            class="__button --green"
+            @click="clearFinishedPayment"
+        >
+            <svg class="__svg" aria-hidden="true"><use xlink:href="#home" /></svg>
+            На главную
+        </router-link>
+        <button
+            v-for="action in panelPaymentActions"
+            :key="action.id"
+            type="button"
+            class="__button"
+            :class="{ '--green': action.primary, '--white': action.id === 'cancel' }"
+            :disabled="action.disabled"
+            @click="action.run()"
+        >
+            <svg v-if="action.icon" class="__svg" aria-hidden="true">
+                <use :xlink:href="`#${action.icon}`" />
+            </svg>
+            <span>{{ action.label }}</span>
+        </button>
+        <template #trailing>
+            <call-support-component :show-text="false" />
+        </template>
+    </fixed-actions>
 </template>
 
 <style scoped>
+.order-payment-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.order-view {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
 .payment-result-icon {
     width: 4rem;
     height: 4rem;
-    fill: var(--green-color);
+    color: var(--green-color);
 }
 
 .payment-result-icon.--error {
-    fill: #e8541e;
+    color: #e8541e;
 }
 
 .payment-reconciliation {
@@ -610,14 +620,4 @@ onBeforeUnmount(() => {
     font-weight: 600;
 }
 
-.payment-result-actions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: center;
-    gap: 1rem;
-}
-
-.payment-result-actions.--single {
-    grid-template-columns: minmax(0, 1fr);
-}
 </style>

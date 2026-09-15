@@ -347,6 +347,23 @@ const resumePayment = async () => {
     }
 };
 
+// The order screen renders these controls in its shared fixed panel.
+const actions = computed(() => {
+    const result = [];
+    if (showCancelAction.value) {
+        const disabled = isCanceling.value || cardState.value === 'canceling';
+        result.push({
+            id: 'cancel',
+            label: disabled ? 'Отменяем оплату…' : 'Отменить и начать заново',
+            disabled,
+            run: cancelPayment,
+        });
+    }
+    return result;
+});
+
+defineExpose({ actions });
+
 onMounted(() => {
     connectSocket();
     if (props.resumeOnly) {
@@ -431,7 +448,7 @@ onBeforeUnmount(() => {
             <div class="payment-test-actions">
                 <button
                     type="button"
-                    class="__button --green"
+                    class="__button --green --block"
                     :disabled="isMockResolving"
                     @click="resolveMockPayment('approve')"
                 >
@@ -439,7 +456,7 @@ onBeforeUnmount(() => {
                 </button>
                 <button
                     type="button"
-                    class="__button"
+                    class="__button --block"
                     :disabled="isMockResolving"
                     @click="resolveMockPayment('decline')"
                 >
@@ -451,20 +468,6 @@ onBeforeUnmount(() => {
             </div>
         </div>
 
-        <div v-if="showCancelAction" class="payment-cancel-actions mt-6">
-            <button
-                type="button"
-                class="__button"
-                :disabled="isCanceling || cardState === 'canceling'"
-                @click="cancelPayment"
-            >
-                {{
-                    isCanceling || cardState === 'canceling'
-                        ? 'Отменяем оплату…'
-                        : 'Отменить и начать заново'
-                }}
-            </button>
-        </div>
         <div
             v-if="cancelError"
             class="payment-cancel-error mt-4"
@@ -479,7 +482,7 @@ onBeforeUnmount(() => {
 .payment-status-icon {
     width: 4rem;
     height: 4rem;
-    fill: var(--green-color);
+    color: var(--green-color);
 }
 
 .payment-instruction {
@@ -504,7 +507,7 @@ onBeforeUnmount(() => {
 .card-payment-icon {
     width: 10rem;
     height: 7rem;
-    fill: var(--green-color);
+    color: var(--green-color);
 }
 
 .payment-connection {
@@ -524,20 +527,15 @@ onBeforeUnmount(() => {
     font-size: 0.7rem;
 }
 
-.payment-test-actions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.65rem;
-}
-
 .payment-test-error {
     color: #b63d12;
     font-weight: 600;
 }
 
-.payment-cancel-actions {
-    display: flex;
-    justify-content: center;
+.payment-test-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
 }
 
 .payment-cancel-error {

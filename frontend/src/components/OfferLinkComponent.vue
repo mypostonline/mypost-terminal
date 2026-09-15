@@ -38,6 +38,7 @@ const isOpen = ref(false);
                         aria-label="Закрыть оферту"
                         @click="isOpen = false"
                     >
+                        <svg class="__svg" aria-hidden="true"><use xlink:href="#cancel" /></svg>
                         Закрыть
                     </button>
                 </div>

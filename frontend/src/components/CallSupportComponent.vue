@@ -45,7 +45,7 @@ const supportLabel = computed(() => {
         :disabled="isSupportCalled"
         @click="propertyStore.callSupport"
     >
-        <svg class="__svg" style="fill: var(--primary-color)">
+        <svg class="__svg" style="color: var(--primary-color)">
             <use xlink:href="#call"></use>
         </svg>
         <template v-if="showText">

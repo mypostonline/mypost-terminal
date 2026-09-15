@@ -1,0 +1,200 @@
+.program-card-description {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    margin-top: 0.4rem;
+    font-size: clamp(14px, 0.62rem, 23px);
+    line-height: 1.45;
+    color: #000000;
+    white-space: pre-line;
+}
+
+.program-card-help {
+    position: relative;
+    pointer-events: auto;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: clamp(32px, 1.4rem, 50px);
+    height: clamp(32px, 1.4rem, 50px);
+    padding: 0;
+    border: 1px solid rgb(255 255 255 / 45%);
+    border-radius: 50%;
+    background: rgb(255 255 255 / 75%);
+    color: #000000;
+    font-size: clamp(18px, 0.75rem, 27px);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.program-card-help[aria-expanded="true"] {
+    background: #ffffff;
+    color: #000000;
+}
+
+.program-card-options {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.3rem;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+.program-card-option-block {
+    position: relative;
+    z-index: 2;
+}
+
+.program-card-options > li {
+    min-width: 0;
+}
+
+.program-option-descriptions {
+    display: grid;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0.85rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: #ffffff;
+    color: var(--primary-color);
+    font-size: clamp(12px, 0.55rem, 20px);
+    line-height: 1.4;
+    list-style: none;
+}
+
+.program-option-descriptions > li {
+    display: grid;
+    grid-template-columns: clamp(48px, 2.5rem, 90px) minmax(0, 1fr);
+    align-items: start;
+    gap: 0.65rem;
+}
+
+.program-option-explanation {
+    display: grid;
+    gap: 0.15rem;
+    overflow-wrap: anywhere;
+    white-space: pre-line;
+}
+
+.program-options-dialog {
+    width: min(90vw, 24rem);
+    max-width: 90vw;
+    max-height: 85svh;
+    margin: auto;
+    padding: 0;
+    border: 1px solid #d8ddf0;
+    border-radius: 0.85rem;
+    background: #fff;
+    color: var(--primary-color);
+    box-shadow: 0 0.5rem 2rem rgb(17 29 85 / 25%);
+    overflow: hidden;
+}
+
+.program-options-dialog::backdrop {
+    background: rgb(16 27 55 / 55%);
+}
+
+.program-options-modal {
+    display: flex;
+    flex-direction: column;
+    max-height: 85svh;
+}
+
+.program-options-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.65rem 0.85rem;
+    border-bottom: 1px solid #e2e8ed;
+}
+
+.program-options-modal-header h2 {
+    margin: 0;
+    font-size: clamp(18px, 0.85rem, 30px);
+    overflow-wrap: anywhere;
+}
+
+.program-options-close {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border: 0;
+    border-radius: 50%;
+    background: #eef1f7;
+    color: var(--primary-color);
+    font-size: 30px;
+    cursor: pointer;
+}
+
+.program-option-descriptions > li + li {
+    padding-top: 0.5rem;
+    border-top: 1px solid #e2e8ed;
+}
+
+.program-option-status {
+    color: #657582;
+}
+
+.program-option-status.--included {
+    color: var(--green-color);
+}
+
+.program-option {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+    min-width: 0;
+    width: 100%;
+    border: 0;
+    padding: 0.4rem 0.12rem 0.3rem;
+    border-radius: 0.4rem;
+    background: rgb(225 229 241 / 80%);
+    color: #73829a;
+    text-align: center;
+}
+
+.program-option.--included {
+    background: var(--green-color);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 25%), 0 0.08rem 0.2rem rgb(36 165 41 / 12%);
+    color: #ffffff;
+}
+
+.program-option-icon {
+    display: grid;
+    place-items: center;
+    width: clamp(24px, 1.35rem, 49px);
+    max-width: 100%;
+    height: clamp(24px, 1.35rem, 49px);
+}
+
+.program-option-icon > * {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.program-option-icon img {
+    filter: brightness(0) saturate(100%);
+    opacity: 0.5;
+}
+
+.program-option.--included img {
+    filter: brightness(0) invert(1);
+    opacity: 1;
+}
+
+.program-option-check {
+    position: absolute;
+    top: 0.08rem;
+    right: 0.12rem;
+    font-size: 0.32rem;
+    line-height: 1;
+}

@@ -3,16 +3,29 @@ const PAYMENT_METHOD_DEFINITIONS = {
         code: 'card',
         paymentMethod: 'vendotek',
         actionLabel: 'Оплатить картой',
+        label: 'Картой',
         description: 'Банковской картой или телефоном',
-        icon: 'nfc',
+        //icon: 'bank-card',
+        icon: 'nfc_green',
     },
     cash: {
         code: 'cash',
         paymentMethod: 'cash',
         actionLabel: 'Оплатить наличными',
+        label: 'Наличными',
         description: 'Через купюроприёмник',
         icon: 'cash',
     },
+};
+
+// Display-only until an SBP payment integration is configured.
+export const SBP_PAYMENT_METHOD = {
+    code: 'sbp',
+    actionLabel: 'Оплатить по СБП',
+    label: 'По СБП',
+    icon: 'sbp',
+    available: false,
+    unavailableLabel: '',
 };
 
 const PAYMENT_METHOD_ALIASES = {
