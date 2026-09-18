@@ -6,9 +6,16 @@ import {
 
 describe('payment methods', () => {
     it('normalizes API aliases', () => {
+        expect(getPaymentMethodCode('sbp')).toBe('sbp');
         expect(getPaymentMethodCode('vendotek')).toBe('card');
         expect(getPaymentMethodCode('bank_card')).toBe('card');
         expect(getPaymentMethodCode({ type: 'cash' })).toBe('cash');
+    });
+
+    it('enables SBP independently of local payment devices', () => {
+        expect(getConfiguredPaymentMethods({ payment_methods: ['sbp'] }, {
+            card: { available: false }, cash: { available: false },
+        })).toMatchObject([{ code: 'sbp', paymentMethod: 'sbp', available: true }]);
     });
 
     it('requires both configuration and device readiness', () => {

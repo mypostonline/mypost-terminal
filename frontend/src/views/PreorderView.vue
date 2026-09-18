@@ -32,13 +32,16 @@ const createError = ref('');
 let capabilitiesTimer = null;
 
 const paymentMethodOrder = ['card', 'sbp', 'cash'];
-const paymentMethods = computed(() => [...getConfiguredPaymentMethods(
+const paymentMethods = computed(() => {
+    const configured = getConfiguredPaymentMethods(
     post.value,
     runtimePaymentMethods.value
-), SBP_PAYMENT_METHOD].sort((a, b) => (
+    );
+    if (!configured.some(method => method.code === 'sbp')) configured.push(SBP_PAYMENT_METHOD);
+    return configured.sort((a, b) => (
     paymentMethodOrder.indexOf(a.code) - paymentMethodOrder.indexOf(b.code)
 )).map(method => {
-    if (method.code === 'sbp' || isPostAcceptingOrders(post.value)) {
+    if ((method.code === 'sbp' && !method.available) || isPostAcceptingOrders(post.value)) {
         return method;
     }
     return {
@@ -46,7 +49,8 @@ const paymentMethods = computed(() => [...getConfiguredPaymentMethods(
         available: false,
         unavailableLabel: 'Пост временно недоступен',
     };
-}));
+});
+});
 
 const DRAFT_REQUEST_KEY = 'mypost.orderDraftRequest';
 
@@ -84,7 +88,7 @@ const createOrder = async (paymentMethod) => {
     createError.value = '';
 
     try {
-        await paymentCapabilitiesStore.refresh();
+        if (paymentMethod.code !== 'sbp') await paymentCapabilitiesStore.refresh();
         const currentPaymentMethod = paymentMethods.value.find(
             item => item.code === paymentMethod.code
         );
@@ -215,7 +219,7 @@ onBeforeUnmount(() => {
                         :aria-describedby="!paymentMethod.available && paymentMethod.unavailableLabel !== '' ? `payment-${paymentMethod.code}-status` : undefined"
                         :disabled="
                             isCreatingOrder ||
-                            isCheckingPayments ||
+                            (isCheckingPayments && paymentMethod.code !== 'sbp') ||
                             !paymentMethod.available
                         "
                         @click="createOrder(paymentMethod)"

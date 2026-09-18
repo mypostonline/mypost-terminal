@@ -7,6 +7,9 @@ import { useOrderStore } from '@/stores/orderStore.js';
 import { usePaymentStore } from '@/stores/paymentStore.js';
 import localApi from '@/functions/localApi.js';
 import { creditCashToBalance } from '@/functions/cashOrderApi.js';
+import { createSbpPayment } from '@/functions/sbpPaymentApi.js';
+
+vi.mock('@/functions/sbpPaymentApi.js', () => ({ createSbpPayment: vi.fn(), getSbpPayment: vi.fn(), cancelSbpPayment: vi.fn() }));
 
 vi.mock('@/functions/localApi.js', () => ({ default: vi.fn() }));
 vi.mock('@/functions/cashOrderApi.js', () => ({
@@ -97,6 +100,20 @@ afterEach(() => {
 });
 
 describe('OrderView fixed actions', () => {
+    it('uses the backend-paid SBP order without calling the client paid endpoint or devices', async () => {
+        createSbpPayment.mockResolvedValue({
+            payment: { id: 'sbp-91', order_id: 91, status: 'paid', amount_minor: 125000, currency: 'RUB' },
+            order: { id: 91, total_amount: 1250, payment_method: 'sbp', status: 'paid', uuid: 'order-91', change_amount: 0, items: [] },
+        });
+        await openOrder({ payment_method: 'sbp' });
+        expect(wrapper.text()).toContain('Оплата принята');
+        expect(orderStore.paidOrder).not.toHaveBeenCalled();
+        expect(localApi).not.toHaveBeenCalled();
+        expect(paymentStore.phase).toBe('completed');
+        expect(wrapper.getComponent({ name: 'OrderQrCode' }).props('orderUrl')).toContain('order-91');
+    });
+
+
     it('keeps the decision timer in device status after cash acceptance times out', async () => {
         const now = Date.now();
         const clock = vi.spyOn(Date, 'now').mockReturnValue(now);

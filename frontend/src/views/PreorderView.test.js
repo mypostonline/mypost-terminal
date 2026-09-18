@@ -46,6 +46,23 @@ afterEach(() => {
 });
 
 describe('Preorder payment tiles', () => {
+    it('creates an SBP order when enabled by the post API, without duplicate tiles', async () => {
+        propertyStore.post.payment_methods = ['card', 'sbp', 'cash'];
+        await flushPromises();
+        const tiles = wrapper.findAll('.payment-methods button');
+        expect(tiles).toHaveLength(3);
+        expect(tiles[1].element.disabled).toBe(false);
+        await tiles[1].trigger('click');
+        await flushPromises();
+        expect(orderStore.createOrder).toHaveBeenCalledWith(expect.objectContaining({ payment_method: 'sbp' }), expect.any(Object));
+    });
+
+    it('disables configured SBP when the post is offline', async () => {
+        propertyStore.post.payment_methods = ['sbp'];
+        propertyStore.post.status = 'offline';
+        await flushPromises();
+        expect(wrapper.get('.payment-methods button').element.disabled).toBe(true);
+    });
     it('keeps the total and bonuses outside the scrollable content', () => {
         expect(wrapper.get('.order-final-list .content').text()).not.toContain('Итого:');
         expect(wrapper.get('.order-final-list .footer').text()).toContain('Итого:');

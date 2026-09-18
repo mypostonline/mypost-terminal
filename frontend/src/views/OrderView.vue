@@ -24,6 +24,7 @@ import FixedActions from "@/components/FixedActions.vue";
 import OrderQrCode from "@/components/order/OrderQrCode.vue";
 import CardPaymentScenario from "@/components/payment/CardPaymentScenario.vue";
 import CashPaymentScenario from "@/components/payment/CashPaymentScenario.vue";
+import SbpPaymentScenario from "@/components/payment/SbpPaymentScenario.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -54,6 +55,7 @@ let reconciliationAttempts = 0;
 let reconciliationInProgress = false;
 
 const paymentScenarios = {
+    sbp: SbpPaymentScenario,
     card: CardPaymentScenario,
     cash: CashPaymentScenario,
 };
@@ -241,6 +243,15 @@ const handleBalanceCreditReady = () => {
     paymentState.value = 'cash_session_completed';
 };
 
+const handleServerPaid = paidOrder => {
+    if (paymentMethodCode.value !== 'sbp' || String(paidOrder?.id) !== String(order.value.id) ||
+        !PAID_ORDER_STATUSES.has(getOrderStatus(paidOrder))) return;
+    orderStore.setOrder(paidOrder);
+    paymentStore.markCompleted();
+    paymentError.value = '';
+    paymentState.value = 'paid';
+};
+
 const continueRecoverablePayment = async () => {
     if (!paymentStore.isRecoverableOrder(route.params.orderId)) {
         return false;
@@ -391,6 +402,7 @@ onBeforeUnmount(() => {
             :order="order"
             :resume-only="resumeExistingDeviceSession"
             @approved="handlePaymentApproved"
+            @server-paid="handleServerPaid"
             @balance-credit-ready="handleBalanceCreditReady"
             @failed="setPaymentFailed"
             @attention="handlePaymentAttention"

@@ -1,4 +1,8 @@
 const PAYMENT_METHOD_DEFINITIONS = {
+    sbp: {
+        code: 'sbp', paymentMethod: 'sbp', actionLabel: 'Оплатить по СБП',
+        label: 'По СБП', description: 'QR-код в приложении банка', icon: 'sbp',
+    },
     card: {
         code: 'card',
         paymentMethod: 'vendotek',
@@ -18,7 +22,7 @@ const PAYMENT_METHOD_DEFINITIONS = {
     },
 };
 
-// Display-only until an SBP payment integration is configured.
+// Keep a disabled tile when SBP is not enabled in the post configuration.
 export const SBP_PAYMENT_METHOD = {
     code: 'sbp',
     actionLabel: 'Оплатить по СБП',
@@ -33,6 +37,7 @@ const PAYMENT_METHOD_ALIASES = {
     card: 'card',
     vendotek: 'card',
     cash: 'cash',
+    sbp: 'sbp',
 };
 
 const envPaymentMethods = (import.meta.env.VITE_PAYMENT_METHODS || 'card')
