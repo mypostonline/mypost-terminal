@@ -4,6 +4,7 @@ import {
     onBeforeMount,
     onBeforeUnmount,
     ref,
+    watch,
 } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { storeToRefs } from "pinia";
@@ -11,7 +12,6 @@ import { useOrderStore } from "@/stores/orderStore.js";
 import { usePaymentStore } from "@/stores/paymentStore.js";
 import { getPaymentMethodCode } from "@/config/paymentMethods.js";
 import { getOrderUrl } from "@/functions/orderUrl.js";
-import { getPrice } from "@/functions/helpers.js";
 import { calculateCashbackAmount } from "@/functions/cashback.js";
 import {
     CLOSED_ORDER_STATUSES,
@@ -42,6 +42,7 @@ const {
 const isInitialized = ref(false);
 const paymentState = ref('loading');
 const paymentError = ref('');
+const balanceCreditAmount = ref(0);
 const paymentControls = ref(null);
 const resumeExistingDeviceSession = ref(
     paymentStore.matchesOrder(route.params.orderId) &&
@@ -51,6 +52,13 @@ const resumeExistingDeviceSession = ref(
 );
 
 let reconciliationTimer = null;
+let resultTimer = null;
+const configuredResultSeconds = Number(import.meta.env.VITE_ORDER_RESULT_TIMEOUT_SECONDS);
+const resultTimeoutMs = (
+    Number.isFinite(configuredResultSeconds) && configuredResultSeconds > 0 && configuredResultSeconds <= 2147483
+        ? configuredResultSeconds
+        : 120
+) * 1000;
 let reconciliationAttempts = 0;
 let reconciliationInProgress = false;
 
@@ -120,6 +128,16 @@ const clearFinishedPayment = () => {
         paymentStore.clear();
     }
 };
+
+watch([paymentState, isInitialized], ([state, initialized]) => {
+    window.clearTimeout(resultTimer);
+    resultTimer = null;
+    if (!initialized || !['paid', 'cash_session_completed'].includes(state)) return;
+    resultTimer = window.setTimeout(() => {
+        clearFinishedPayment();
+        router.replace({ name: 'home' });
+    }, resultTimeoutMs);
+});
 
 const failureTitle = computed(() => {
     if (paymentState.value === 'unsupported') {
@@ -237,7 +255,8 @@ const handlePaymentApproved = async paidAmount => {
     await synchronizePaidOrder();
 };
 
-const handleBalanceCreditReady = () => {
+const handleBalanceCreditReady = amount => {
+    balanceCreditAmount.value = Number.isFinite(Number(amount)) && Number(amount) > 0 ? Number(amount) : 0;
     paymentStore.markCompleted();
     paymentError.value = '';
     paymentState.value = 'cash_session_completed';
@@ -387,6 +406,7 @@ onBeforeMount(async () => {
 });
 
 onBeforeUnmount(() => {
+    window.clearTimeout(resultTimer);
     if (reconciliationTimer) {
         window.clearTimeout(reconciliationTimer);
     }
@@ -444,15 +464,12 @@ onBeforeUnmount(() => {
                     <use xlink:href="#clock-ok"></use>
                 </svg>
                 <h2 class="mt-4">Заказ отменён</h2>
-                <h3 class="mt-4">
-                    Чтобы зачислить внесённую сумму на баланс,<br>
-                    отсканируйте QR-код заказа
-                </h3>
             </div>
             <order-qr-code
                 v-if="showOrderQr"
                 :order-id="order.id"
                 :order-url="orderQrUrl"
+                :balance-credit-amount="balanceCreditAmount"
             />
         </template>
 
@@ -471,30 +488,9 @@ onBeforeUnmount(() => {
                 v-if="showOrderQr"
                 :order-id="order.id"
                 :order-url="orderQrUrl"
-            >
-                <template #description>
-                    <template v-if="changeAmount > 0">
-                        Чтобы зачислить сдачу
-                        <strong>{{ getPrice(changeAmount) }}</strong><template
-                            v-if="cashbackAmount > 0"
-                        > и бонусы на сумму
-                            <strong>{{ getPrice(cashbackAmount) }}</strong>
-                        </template>, а также посмотреть <strong>чек</strong>,
-                        отсканируйте <strong>QR-код</strong>.
-                    </template>
-                    <template v-else-if="cashbackAmount > 0">
-                        Чтобы зачислить бонусы на сумму
-                        <strong>{{ getPrice(cashbackAmount) }}</strong> и
-                        посмотреть <strong>чек</strong>, отсканируйте
-                        <strong>QR-код</strong>.
-                    </template>
-                    <template v-else>
-                        Чтобы открыть заказ и посмотреть
-                        <strong>чек</strong>, отсканируйте
-                        <strong>QR-код</strong>.
-                    </template>
-                </template>
-            </order-qr-code>
+                :change-amount="changeAmount"
+                :cashback-amount="cashbackAmount"
+            />
         </template>
 
         <template v-else>
@@ -505,7 +501,7 @@ onBeforeUnmount(() => {
                 <h2 class="mt-4">{{ failureTitle }}</h2>
             </div>
 
-            <div class="post-info mt-16">
+            <div class="post-info mt-24">
                 <div class="post-status" style="max-width: 14rem;">
                     <svg class="__svg shape" style="fill: #E8541E;">
                         <use xlink:href="#shape"></use>
@@ -628,8 +624,9 @@ onBeforeUnmount(() => {
 }
 
 .payment-error {
-    font-size: 0.75rem;
+    font-size: 1.333rem;
     font-weight: 600;
+    line-height: 1.2em;
 }
 
 </style>

@@ -263,7 +263,7 @@ const applySession = (nextSession) => {
         !balanceCreditEmitted.value
     ) {
         balanceCreditEmitted.value = true;
-        emit('balance-credit-ready');
+        emit('balance-credit-ready', Number(nextSession.acceptedAmountMinor) / 100);
         return;
     }
 

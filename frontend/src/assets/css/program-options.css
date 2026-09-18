@@ -1,8 +1,8 @@
 .program-card-description {
     display: -webkit-box;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
+    -webkit-line-clamp: 5;
+    line-clamp: 5;
     overflow: hidden;
     margin-top: 0.4rem;
     font-size: clamp(14px, 0.62rem, 23px);
@@ -154,7 +154,7 @@
     min-width: 0;
     width: 100%;
     border: 0;
-    padding: 0.4rem 0.12rem 0.3rem;
+    padding: 0.25rem;
     border-radius: 0.4rem;
     background: rgb(225 229 241 / 80%);
     color: #73829a;
@@ -170,9 +170,9 @@
 .program-option-icon {
     display: grid;
     place-items: center;
-    width: clamp(24px, 1.35rem, 49px);
+    width: 90%;
     max-width: 100%;
-    height: clamp(24px, 1.35rem, 49px);
+    aspect-ratio: 1;
 }
 
 .program-option-icon > * {

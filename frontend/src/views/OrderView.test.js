@@ -97,6 +97,8 @@ afterEach(() => {
     wrapper?.unmount();
     document.body.replaceChildren();
     vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+    vi.useRealTimers();
 });
 
 describe('OrderView fixed actions', () => {
@@ -113,6 +115,37 @@ describe('OrderView fixed actions', () => {
         expect(wrapper.getComponent({ name: 'OrderQrCode' }).props('orderUrl')).toContain('order-91');
     });
 
+    it('returns home after the completed order has been shown for two minutes', async () => {
+        vi.stubEnv('VITE_ORDER_RESULT_TIMEOUT_SECONDS', '120');
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] });
+        await openOrder({ status: 'paid' });
+        await vi.advanceTimersByTimeAsync(119999);
+        expect(router.currentRoute.value.path).toBe('/order/91');
+        await vi.advanceTimersByTimeAsync(1);
+        await flushPromises();
+        expect(router.currentRoute.value.path).toBe('/');
+        expect(paymentStore.phase).toBe('idle');
+    });
+
+    it('uses the configured timeout for the balance credit result', async () => {
+        vi.stubEnv('VITE_ORDER_RESULT_TIMEOUT_SECONDS', '3');
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] });
+        session = { ...session, state: 'balance_credit_ready', acceptedAmountMinor: 10000 };
+        await openOrder({ payment_method: 'cash' });
+        await vi.advanceTimersByTimeAsync(2999);
+        expect(router.currentRoute.value.path).toBe('/order/91');
+        await vi.advanceTimersByTimeAsync(1);
+        await flushPromises();
+        expect(router.currentRoute.value.path).toBe('/');
+    });
+
+    it('does not start a result timeout while payment is still processing', async () => {
+        vi.stubEnv('VITE_ORDER_RESULT_TIMEOUT_SECONDS', '1');
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] });
+        await openOrder();
+        await vi.advanceTimersByTimeAsync(2000);
+        expect(router.currentRoute.value.path).toBe('/order/91');
+    });
 
     it('keeps the decision timer in device status after cash acceptance times out', async () => {
         const now = Date.now();
@@ -242,7 +275,7 @@ describe('OrderView fixed actions', () => {
 
     it('credits a partial payment and replaces controls with home', async () => {
         session = { ...session, state: 'partial_payment', acceptedAmountMinor: 10000 };
-        await openOrder({ payment_method: 'cash' });
+        await openOrder({ payment_method: 'cash', uuid: 'order-91' });
         localApi.mockImplementation(async url => {
             session = { ...session, state: url.endsWith('/confirm') ? 'balance_credit_ready' : 'balance_credit_required' };
             return { session };
@@ -251,6 +284,7 @@ describe('OrderView fixed actions', () => {
         await flushPromises();
         expect(creditCashToBalance).toHaveBeenCalledWith(expect.objectContaining({ orderId: 91 }));
         expect(wrapper.text()).toContain('Заказ отменён');
+        expect(wrapper.getComponent({ name: 'OrderQrCode' }).props('balanceCreditAmount')).toBe(100);
         expect(homeLink()).not.toBeNull();
         expect(buttons()).toHaveLength(1);
         expect(wrapper.find('.order-payment-actions').exists()).toBe(false);

@@ -107,7 +107,7 @@ onBeforeUnmount(() => {
                         <router-link
                             v-if="isPostAcceptingOrders(post)"
                             to="/programs"
-                            class="__button"
+                            class="__button --white"
                         >
                             Начать
                         </router-link>

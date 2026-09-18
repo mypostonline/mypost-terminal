@@ -27,7 +27,7 @@ const detailProgram = computed(() => {
     const included = new Map((program.value.options || []).map(option => [optionKey(option), option]));
     return {
         ...program.value,
-        description: program.value.description || (program.value.options || []).map(option => option.name).filter(Boolean).join(' · '),
+        description: typeof program.value.description === 'string' ? program.value.description.trim() : '',
         comparisonOptions: [...catalog.values()].map(option => {
             const selected = included.get(option.key);
             return {
@@ -153,8 +153,8 @@ const isExcludedAddon = (addon) => {
 <style scoped>
 .program-detail-icon {
     color: var(--green-color);
-    width: 1.25em;
-    height: 1.25em;
+    width: 1.5em;
+    height: 1.5em;
 }
 
 .program-view,

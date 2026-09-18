@@ -90,10 +90,11 @@ describe('program comparison cards', () => {
         expect(wrapper.text()).not.toContain('undefined');
     });
 
-    it('uses actual included option names when there is no description', async () => {
-        delete propertyStore.property.programs[0].description;
+    it.each([undefined, null, '', '   \n '])('hides an empty API description (%s) even when options exist', async description => {
+        propertyStore.property.programs[0].description = description;
         await flushPromises();
-        expect(cards()[0].get('.program-card-description').text()).toBe('Вода · Пена');
+        expect(cards()[0].find('.program-card-description').exists()).toBe(false);
+        expect(cards()[0].findAll('.program-option')).not.toHaveLength(0);
     });
 
     it('shows all option descriptions from the help button without navigating', async () => {

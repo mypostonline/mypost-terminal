@@ -13,6 +13,8 @@ export function useInactivity(msTimeout = 60_000) {
         timer.value = setTimeout(async () => {
             if (
                 route.name !== 'home' &&
+                // The completed order screen owns its display timeout.
+                !(route.name === 'order' && paymentStore.phase === 'completed') &&
                 !paymentStore.isNavigationLocked
             ) {
                 await router.replace({ path: '/' });

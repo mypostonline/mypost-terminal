@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia } from 'pinia';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
@@ -6,12 +6,14 @@ import ProgramView from './ProgramView.vue';
 import { usePropertyStore } from '@/stores/propertyStore.js';
 
 let wrapper;
+let propertyStore;
 beforeEach(async () => {
     vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
     HTMLDialogElement.prototype.showModal = vi.fn(function () { this.setAttribute('open', ''); });
     HTMLDialogElement.prototype.close = vi.fn(function () { this.removeAttribute('open'); });
     const pinia = createPinia();
-    usePropertyStore(pinia).property = {
+    propertyStore = usePropertyStore(pinia);
+    propertyStore.property = {
         programs: [
             { id: 1, name: 'Стандарт', description: 'Базовая мойка для ежедневной чистоты', price: 300, duration: 5, options: [{ id: 1, name: 'Пена', description: 'Удаляет загрязнения', passes: 2 }] },
             { id: 2, name: 'Комплекс', price: 500, options: [{ id: 2, name: 'Воск', image: '/wax.svg' }] },
@@ -43,6 +45,13 @@ it('places the title above icon-only options and duration beside the price below
     expect(block.findAll('.program-option.--included')).toHaveLength(1);
     expect(block.get('.footer .duration').text()).toContain('5 мин');
     expect(block.get('.footer .price').text()).toContain('300');
+});
+
+it.each([undefined, null, '', '   \n '])('hides an empty API description (%s) even when options exist', async description => {
+    propertyStore.program.description = description;
+    await flushPromises();
+    expect(wrapper.find('.program-card-description').exists()).toBe(false);
+    expect(wrapper.findAll('.program-card-options .program-option')).toHaveLength(2);
 });
 
 it('opens descriptions only from help and closes the shared modal', async () => {

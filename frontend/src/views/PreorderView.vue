@@ -253,6 +253,7 @@ onBeforeUnmount(() => {
                 {{ createError }}
             </div>
         </section>
+        <div style="font-weight: 600; margin-top: 1rem; text-align: center; font-size: 0.85em;">Сдача наличными не выдаётся. Чтобы зачислить её на баланс вашего личного кабинета, отсканируйте QR-код заказа после оплаты.</div>
         <div class="mt-4 text-center" style="font-size: 0.75rem; font-weight: 500; margin-top: 1rem;">
             <input type="checkbox" checked disabled>
             Выбирая оплату, вы принимаете условия сервиса

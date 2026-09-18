@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
 import { getQrImageUrl } from '@/functions/qrUrl.js';
+import { getPrice } from '@/functions/helpers.js';
 import vRandomQrAnimation from '@/directives/randomQrAnimation.js';
 
 const props = defineProps({
@@ -12,11 +13,9 @@ const props = defineProps({
         type: String,
         required: true,
     },
-    description: {
-        type: String,
-        default: 'Отсканируйте QR-код, чтобы открыть заказ, получить ' +
-            'доступные начисления и посмотреть чек.',
-    },
+    changeAmount: { type: Number, default: 0 },
+    cashbackAmount: { type: Number, default: 0 },
+    balanceCreditAmount: { type: Number, default: 0 },
 });
 
 const qrImage = computed(() => getQrImageUrl(props.orderUrl));
@@ -43,6 +42,21 @@ const handleQrError = () => {
 <template>
     <section class="order-qr mt-6" aria-live="polite">
         <h2>Заказ №{{ orderId }}</h2>
+        <p v-if="balanceCreditAmount > 0 || changeAmount > 0 || cashbackAmount > 0" class="order-qr-credit">
+            <template v-if="balanceCreditAmount > 0">
+                Чтобы зачислить внесённую сумму <strong>{{ getPrice(balanceCreditAmount) }}</strong>
+                на баланс, отсканируйте QR-код.
+            </template>
+            <template v-else-if="changeAmount > 0">
+                Чтобы зачислить сдачу <strong>{{ getPrice(changeAmount) }}</strong><template v-if="cashbackAmount > 0">
+                    и бонусы на сумму <strong>{{ getPrice(cashbackAmount) }}</strong></template>
+                на баланс, отсканируйте QR-код.
+            </template>
+            <template v-else>
+                Чтобы зачислить бонусы на сумму <strong>{{ getPrice(cashbackAmount) }}</strong>
+                на баланс, отсканируйте QR-код.
+            </template>
+        </p>
         <div
             v-if="qrImage && !qrError"
             v-random-qr-animation
@@ -69,8 +83,8 @@ const handleQrError = () => {
         <div v-else class="order-qr-loading">
             QR-код заказа недоступен
         </div>
-        <p style="font-weight: 600;">
-            <slot name="description">{{ description }}</slot>
+        <p class="order-qr-description" style="font-weight: 600;">
+            Чтобы открыть заказ и посмотреть чек, отсканируйте QR-код.
         </p>
     </section>
 </template>
@@ -93,6 +107,11 @@ const handleQrError = () => {
     display: grid;
     place-items: center;
     width: min(100%, 17rem);
+}
+
+.order-qr-credit strong {
+    color: var(--green-color);
+    font-weight: 700;
 }
 
 .order-qr-loading,

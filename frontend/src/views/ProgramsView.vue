@@ -47,7 +47,7 @@ const programCards = computed(() => (property.value?.programs || [])
         const included = new Map((program.options || []).map(option => [optionKey(option), option]));
         return {
             ...program,
-            description: program.description || (program.options || []).map(option => option.name).filter(Boolean).join(' · '),
+            description: typeof program.description === 'string' ? program.description.trim() : '',
             comparisonOptions: allOptions.value.map(option => {
                 const selected = included.get(option.key);
                 const passes = selected?.passes ? ` (${wordEndPasses(selected.passes)})` : '';
