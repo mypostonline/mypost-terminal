@@ -133,13 +133,13 @@ const loadConfig = ({
             maxPacketTimeMs: readNumber(
                 env,
                 'BILL_ACCEPTOR_MAX_PACKET_TIME_MS',
-                3000,
+                30_000,
                 { min: 1 }
             ),
             validAmountsRub: readNumberList(
                 env,
                 'BILL_ACCEPTOR_VALID_AMOUNTS',
-                [ 50, 100, 500, 1000 ]
+                [ 50, 100, 500, 1000, 2000 ]
             ),
             gpiomonCommand:
                 env.BILL_ACCEPTOR_GPIOMON_COMMAND || 'gpiomon',

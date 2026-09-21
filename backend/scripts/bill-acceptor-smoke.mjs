@@ -8,13 +8,14 @@ const GPIO_LINE = '17';
 // Настройки фильтрации
 const DEBOUNCE_MS = 70;          // ложный фронт ~51 мс, полезный ~102 мс
 const PACKET_TIMEOUT_MS = 1200;  // конец пачки импульсов
-const MAX_PACKET_TIME_MS = 3000; // максимальная длина пачки
+const MAX_PACKET_TIME_MS = 30000; // максимальная длина пачки
 
 const VALID_AMOUNTS = [
     50,
     100,
     500,
-    1000
+    1000,
+    2000
 ];
 
 let pulses = 0;

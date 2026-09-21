@@ -166,6 +166,29 @@ test('combines rising edges into one bill event', async () => {
     await client.stop();
 });
 
+test('accepts a long 2000-ruble pulse packet', async () => {
+    const { client } = await createGpioClient({
+        rubPerPulse: 50,
+        maxPacketTimeMs: 30_000,
+        validAmountsRub: [ 50, 100, 500, 1000, 2000 ],
+    });
+    await client.enableAcceptance();
+
+    const billEvent = once(client, 'bill');
+    for (let index = 0; index < 40; index += 1) {
+        const timestampSeconds = 1000 + index * 0.35;
+        client.handlePulse(`${timestampSeconds} rising edge`);
+    }
+
+    const [ bill ] = await billEvent;
+    assert.equal(bill.pulses, 40);
+    assert.equal(bill.amountMinor, 200_000);
+    assert.equal(bill.amountRub, 2000);
+
+    await client.disableAcceptance();
+    await client.stop();
+});
+
 test('filters duplicate edges inside the debounce interval', async () => {
     const timestamps = [ 1000, 1010, 1030 ];
     const { client } = await createGpioClient({

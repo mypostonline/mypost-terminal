@@ -13,7 +13,7 @@ test('loads backend defaults without an env file', () => {
     assert.equal(config.billAcceptor.driver, 'gpio-pulse');
     assert.equal(config.billAcceptor.mode, 'disabled');
     assert.equal(config.billAcceptor.debounceMs, 70);
-    assert.equal(config.billAcceptor.maxPacketTimeMs, 3000);
+    assert.equal(config.billAcceptor.maxPacketTimeMs, 30_000);
     assert.equal(config.billAcceptor.relay.enabled, false);
     assert.equal(
         config.billAcceptor.relay.url,
@@ -24,7 +24,7 @@ test('loads backend defaults without an env file', () => {
     assert.equal(config.billAcceptor.relay.requestTimeoutMs, 3_000);
     assert.deepEqual(
         config.billAcceptor.validAmountsRub,
-        [ 50, 100, 500, 1000 ]
+        [ 50, 100, 500, 1000, 2000 ]
     );
     assert.equal(config.cashPayment.billTimeoutSec, 120);
     assert.equal(config.cashPayment.partialDecisionTimeoutSec, 600);

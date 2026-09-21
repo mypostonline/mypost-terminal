@@ -45,7 +45,7 @@ const supportLabel = computed(() => {
         :disabled="isSupportCalled"
         @click="propertyStore.callSupport"
     >
-        <svg class="__svg" style="color: var(--primary-color)">
+        <svg v-if="showText || supportState !== 'sent'" class="__svg" style="color: var(--primary-color)">
             <use xlink:href="#call"></use>
         </svg>
         <template v-if="showText">
@@ -60,6 +60,7 @@ const supportLabel = computed(() => {
             </span>
             <span v-else>Вызов оператора</span>
         </template>
+        <span v-else-if="supportState === 'sent'" class="support-countdown">{{ secondsLeft }}</span>
     </button>
     <div
         v-if="showText && supportState === 'error'"
@@ -72,8 +73,16 @@ const supportLabel = computed(() => {
 </template>
 
 <style scoped>
+.support-button {
+    white-space: nowrap;
+}
+
 .support-button.--error {
     border-color: #e8541e;
+}
+
+.support-countdown {
+    font-variant-numeric: tabular-nums;
 }
 
 .support-button.--icon-only {

@@ -106,6 +106,24 @@ describe('Preorder payment tiles', () => {
         await flushPromises();
         expect(wrapper.findAll('.payment-methods button').every(tile => tile.element.disabled)).toBe(true);
         expect(wrapper.find('#payment-sbp-status').exists()).toBe(false);
-        expect(wrapper.text()).toContain('Оплата на этом терминале временно недоступна');
+        expect(wrapper.text()).not.toContain('Оплата на этом терминале временно недоступна');
+        expect(wrapper.find('.payment-method-description').exists()).toBe(false);
+        expect(wrapper.find('.payment-methods-empty').exists()).toBe(false);
+        expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+    });
+
+    it('silently disables a method that becomes unavailable during the final check', async () => {
+        const capabilities = usePaymentCapabilitiesStore(wrapper.vm.$pinia);
+        capabilities.refresh.mockImplementation(async () => {
+            capabilities.status.cardTerminal.available = false;
+            return capabilities.status;
+        });
+        await wrapper.findAll('.payment-methods button')[0].trigger('click');
+        await flushPromises();
+        expect(orderStore.createOrder).not.toHaveBeenCalled();
+        expect(wrapper.findAll('.payment-methods button')[0].element.disabled).toBe(true);
+        expect(wrapper.findAll('.payment-methods button')[2].element.disabled).toBe(false);
+        expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+        expect(wrapper.text()).not.toContain('Терминал карты недоступен');
     });
 });

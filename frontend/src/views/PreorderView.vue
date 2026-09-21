@@ -94,9 +94,6 @@ const createOrder = async (paymentMethod) => {
         );
 
         if (!currentPaymentMethod?.available) {
-            createError.value =
-                currentPaymentMethod?.unavailableLabel ||
-                'Выбранный способ оплаты сейчас недоступен';
             return;
         }
 
@@ -216,7 +213,6 @@ onBeforeUnmount(() => {
                         class="__button --tile"
                         type="button"
                         :aria-label="`${selectedPaymentMethod === paymentMethod.code ? 'Создаём заказ…' : paymentMethod.actionLabel}: ${getPrice(order.total_amount)}`"
-                        :aria-describedby="!paymentMethod.available && paymentMethod.unavailableLabel !== '' ? `payment-${paymentMethod.code}-status` : undefined"
                         :disabled="
                             isCreatingOrder ||
                             (isCheckingPayments && paymentMethod.code !== 'sbp') ||
@@ -237,17 +233,7 @@ onBeforeUnmount(() => {
                             }}
                         </span>
                     </button>
-                    <p
-                        v-if="!paymentMethod.available && paymentMethod.unavailableLabel !== ''"
-                        :id="`payment-${paymentMethod.code}-status`"
-                        class="payment-method-description"
-                    >
-                        {{ paymentMethod.unavailableLabel || 'Временно недоступно' }}
-                    </p>
                 </div>
-            </div>
-            <div v-if="!paymentMethods.some(method => method.available)" class="payment-methods-empty mt-4">
-                Оплата на этом терминале временно недоступна
             </div>
             <div v-if="createError" class="payment-error mt-4" role="alert">
                 {{ createError }}
@@ -317,24 +303,6 @@ onBeforeUnmount(() => {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     align-items: start;
     gap: 0.75rem;
-}
-
-.payment-method-description {
-    margin-top: 0.2rem;
-    font-size: clamp(12px, 0.5rem, 18px);
-    font-weight: 500;
-    line-height: 1.25;
-    opacity: 0.75;
-    text-align: center;
-}
-
-.payment-methods-empty {
-    padding: 1rem;
-    border-radius: 0.75rem;
-    background: #ffffff;
-    box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.18);
-    font-weight: 600;
-    text-align: center;
 }
 
 .payment-error {

@@ -9,7 +9,7 @@ import localApi from '@/functions/localApi.js';
 import { creditCashToBalance } from '@/functions/cashOrderApi.js';
 import { createSbpPayment } from '@/functions/sbpPaymentApi.js';
 
-vi.mock('@/functions/sbpPaymentApi.js', () => ({ createSbpPayment: vi.fn(), getSbpPayment: vi.fn(), cancelSbpPayment: vi.fn() }));
+vi.mock('@/functions/sbpPaymentApi.js', () => ({ createSbpPayment: vi.fn(), getSbpPayment: vi.fn(), cancelSbpPayment: vi.fn(), SBP_PAYMENT_TIMEOUT_SECONDS: 600 }));
 
 vi.mock('@/functions/localApi.js', () => ({ default: vi.fn() }));
 vi.mock('@/functions/cashOrderApi.js', () => ({

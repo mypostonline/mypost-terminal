@@ -3,7 +3,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import SbpPaymentScenario from './SbpPaymentScenario.vue';
 import { createSbpPayment, getSbpPayment, cancelSbpPayment } from '@/functions/sbpPaymentApi.js';
 
-vi.mock('@/functions/sbpPaymentApi.js', () => ({ createSbpPayment: vi.fn(), getSbpPayment: vi.fn(), cancelSbpPayment: vi.fn() }));
+vi.mock('@/functions/sbpPaymentApi.js', () => ({ createSbpPayment: vi.fn(), getSbpPayment: vi.fn(), cancelSbpPayment: vi.fn(), SBP_PAYMENT_TIMEOUT_SECONDS: 600 }));
 let wrapper;
 let payment;
 const order = { id: 91, total_amount: 1250, items: [], payment_method: 'sbp' };
@@ -17,12 +17,14 @@ beforeEach(() => {
         qr_payload: 'https://bank.example/pay/123', expires_at: new Date(Date.now() + 60000).toISOString() };
     createSbpPayment.mockReset().mockResolvedValue({ payment });
     getSbpPayment.mockReset().mockResolvedValue({ payment });
-    cancelSbpPayment.mockReset();
+    cancelSbpPayment.mockReset().mockResolvedValue({ payment });
 });
 afterEach(() => { wrapper?.unmount(); vi.useRealTimers(); });
 
 it('shows the bank QR and completes only with a server-paid order', async () => {
     await open();
+    expect(wrapper.find('.order-final-list').exists()).toBe(false);
+    expect(wrapper.get('.payment-status-icon use').element.getAttributeNS('http://www.w3.org/1999/xlink', 'href')).toBe('#clock');
     expect(wrapper.get('img').attributes('src')).toContain(encodeURIComponent(payment.qr_payload));
     await wrapper.get('img').trigger('load');
     expect(wrapper.get('.sbp-payment-qr-image').classes()).toContain('--loaded');
@@ -64,6 +66,55 @@ it('handles payment winning a cancellation race', async () => {
     await wrapper.vm.actions[0].run();
     expect(wrapper.emitted('server-paid')).toEqual([[paid]]);
     expect(wrapper.emitted('canceled')).toBeUndefined();
+});
+
+it('queues cancellation during a status check instead of disabling or losing the click', async () => {
+    await open();
+    let resolveStatus;
+    getSbpPayment.mockImplementation(() => new Promise(resolve => { resolveStatus = resolve; }));
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(wrapper.vm.actions[0].disabled).toBe(false);
+    await wrapper.vm.actions[0].run();
+    expect(wrapper.vm.actions[0].disabled).toBe(true);
+    expect(cancelSbpPayment).not.toHaveBeenCalled();
+    cancelSbpPayment.mockResolvedValue({ payment: { ...payment, status: 'canceled' } });
+    resolveStatus({ payment });
+    await flushPromises();
+    expect(cancelSbpPayment).toHaveBeenCalledTimes(1);
+    expect(wrapper.emitted('canceled')).toHaveLength(1);
+});
+
+it('limits payment to ten minutes without resetting the deadline during polling', async () => {
+    payment.expires_at = new Date(Date.now() + 1200000).toISOString();
+    await open();
+    expect(wrapper.text()).toContain('10:00');
+    await vi.advanceTimersByTimeAsync(599000);
+    expect(wrapper.text()).toContain('00:01');
+    expect(cancelSbpPayment).not.toHaveBeenCalled();
+    cancelSbpPayment.mockResolvedValue({ payment: { ...payment, status: 'canceled' } });
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(cancelSbpPayment).toHaveBeenCalledTimes(1);
+    expect(wrapper.emitted('canceled')).toHaveLength(1);
+});
+
+it('keeps the screen on cancellation failure and allows retry', async () => {
+    await open();
+    cancelSbpPayment.mockRejectedValueOnce(new Error('Нет связи'));
+    await wrapper.vm.actions[0].run();
+    expect(wrapper.emitted('canceled')).toBeUndefined();
+    expect(wrapper.vm.actions[0].disabled).toBe(false);
+    cancelSbpPayment.mockResolvedValue({ payment: { ...payment, status: 'canceled' } });
+    await wrapper.vm.actions[0].run();
+    expect(wrapper.emitted('canceled')).toHaveLength(1);
+});
+
+it('explains an unconfirmed cancellation and keeps the notice during polling', async () => {
+    await open();
+    await wrapper.vm.actions[0].run();
+    expect(wrapper.text()).toContain('Отмена пока не подтверждена');
+    expect(wrapper.emitted('canceled')).toBeUndefined();
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(wrapper.text()).toContain('Отмена пока не подтверждена');
 });
 
 it('retries ambiguous creation with the same order and stops polling after unmount', async () => {

@@ -130,6 +130,10 @@
     color: var(--primary-color);
     font-size: 30px;
     cursor: pointer;
+    display: flex;
+    align-content: center;
+    justify-content: center;
+    line-height: 40px;
 }
 
 .program-option-descriptions > li + li {
@@ -170,8 +174,8 @@
 .program-option-icon {
     display: grid;
     place-items: center;
-    width: 90%;
-    max-width: 100%;
+    width: 100%;
+    max-width: 3rem;
     aspect-ratio: 1;
 }
 
