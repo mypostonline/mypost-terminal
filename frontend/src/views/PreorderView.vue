@@ -1,12 +1,12 @@
 <script setup>
 import { storeToRefs } from "pinia";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { usePropertyStore } from "@/stores/propertyStore.js";
 import { useOrderStore } from "@/stores/orderStore.js";
 import { usePaymentStore } from "@/stores/paymentStore.js";
 import { usePaymentCapabilitiesStore } from "@/stores/paymentCapabilitiesStore.js";
 import { getPrice } from "@/functions/helpers.js";
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, onBeforeMount, onBeforeUnmount, onMounted, ref } from "vue";
 import CallSupportComponent from "@/components/CallSupportComponent.vue";
 import FixedActions from "@/components/FixedActions.vue";
 import OfferLinkComponent from "@/components/OfferLinkComponent.vue";
@@ -14,9 +14,18 @@ import { getConfiguredPaymentMethods, SBP_PAYMENT_METHOD } from "@/config/paymen
 import { isPostAcceptingOrders } from "@/config/postAvailability.js";
 
 const router = useRouter();
+const route = useRoute();
 
 const propertyStore = usePropertyStore();
-const { property, post, program, order } = storeToRefs(propertyStore);
+const { property, post, program, order, hasAdditionalServices } = storeToRefs(propertyStore);
+
+onBeforeMount(() => {
+    if (program.value.id === Number(route.params.programId)) return;
+    propertyStore.resetAddons();
+    if (!propertyStore.setProgram(route.params.programId)) {
+        router.replace('/programs');
+    }
+});
 
 const orderStore = useOrderStore();
 const paymentStore = usePaymentStore();
@@ -258,7 +267,7 @@ onBeforeUnmount(() => {
             <template #leading>
                 <router-link
                     v-if="!isCreatingOrder"
-                    :to="`/programs/${program.id}`"
+                    :to="hasAdditionalServices ? `/programs/${program.id}` : '/programs'"
                     class="__button"
                     aria-label="Назад"
                     title="Назад"

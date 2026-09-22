@@ -1,20 +1,18 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import { createSbpPayment, getSbpPayment, cancelSbpPayment, SBP_PAYMENT_TIMEOUT_SECONDS } from '@/functions/sbpPaymentApi.js';
+import { createSbpPayment, getSbpPayment, SBP_PAYMENT_TIMEOUT_SECONDS } from '@/functions/sbpPaymentApi.js';
 import { getQrImageUrl } from '@/functions/qrUrl.js';
 import { formatCountdown, getSecondsUntil } from '@/functions/paymentTimer.js';
 import { getOrderStatus, PAID_ORDER_STATUSES } from '@/config/orderStatuses.js';
 import vRandomQrAnimation from '@/directives/randomQrAnimation.js';
 
 const props = defineProps({ order: { type: Object, required: true }, resumeOnly: Boolean });
-const emit = defineEmits(['server-paid', 'failed', 'canceled']);
+const emit = defineEmits(['server-paid', 'failed', 'canceled', 'abandoned']);
 const payment = ref(null);
 const error = ref('');
 const imageError = ref(false);
 const imageLoaded = ref(false);
 const busy = ref(false);
-const cancelRequested = ref(false);
-const cancellationNotice = ref('');
 const displayDeadline = ref(null);
 let timeoutCancellationRequested = false;
 const now = ref(Date.now());
@@ -71,10 +69,13 @@ const schedulePoll = () => {
 };
 
 const requestCancel = () => {
-    if (cancelRequested.value || stopped || finished) return;
-    cancelRequested.value = true;
-    // Do not drop a user's click while a background status request is in flight.
-    if (!busy.value) return request('cancel');
+    if (stopped || finished) return;
+    // Leave the kiosk flow only. The provider payment is NOT canceled here.
+    stopped = true;
+    controller.abort();
+    window.clearTimeout(pollTimer);
+    window.clearInterval(clockTimer);
+    emit('abandoned');
 };
 
 const request = async kind => {
@@ -85,37 +86,25 @@ const request = async kind => {
     try {
         const response = kind === 'create'
             ? await createSbpPayment(props.order.id, controller.signal)
-            : kind === 'cancel'
-                ? await cancelSbpPayment(props.order.id, payment.value.id, controller.signal)
-                : await getSbpPayment(props.order.id, controller.signal);
-        if (!stopped) {
-            applyResponse(response);
-            if (kind === 'cancel' && payment.value?.status === 'pending') {
-                cancellationNotice.value = 'Отмена пока не подтверждена платёжной системой. Не оплачивайте повторно. Дождитесь завершения проверки или вызовите оператора.';
-            }
-        }
+            : await getSbpPayment(props.order.id, controller.signal);
+        if (!stopped) applyResponse(response);
     } catch (requestError) {
         if (!stopped) error.value = kind === 'create'
             ? 'Не удалось получить QR-код СБП. Повторите запрос или вызовите оператора.'
             : requestError.message || 'Не удалось проверить оплату. Не оплачивайте повторно — восстанавливаем связь.';
     } finally {
         busy.value = false;
-        if (kind === 'cancel') cancelRequested.value = false;
-        if (cancelRequested.value && !stopped && !finished && payment.value?.status === 'pending') {
-            request('cancel');
-        } else {
-            if (payment.value?.status !== 'pending') cancelRequested.value = false;
-            // A failed create can still have created a payment: check before retrying.
-            schedulePoll();
-        }
+        // A failed create can still have created a payment: check before retrying.
+        schedulePoll();
     }
 };
 
 const actions = computed(() => {
     if (finished) return [];
-    if (!payment.value) return [{ id: 'sbp-retry', label: 'Повторить запрос СБП', disabled: busy.value, run: () => request('create') }];
+    const cancelAction = { id: 'cancel', label: 'Отменить и начать заново', disabled: false, run: requestCancel };
+    if (!payment.value) return [{ id: 'sbp-retry', label: 'Повторить запрос СБП', disabled: busy.value, run: () => request('create') }, cancelAction];
     if (payment.value.status !== 'pending') return [];
-    return [{ id: 'cancel', label: cancelRequested.value ? 'Отменяем оплату…' : 'Отменить и начать заново', disabled: cancelRequested.value, run: requestCancel }];
+    return [cancelAction];
 });
 defineExpose({ actions });
 
@@ -167,7 +156,6 @@ onBeforeUnmount(() => {
         </div>
         <p v-else role="status">{{ payment ? 'Проверяем итоговый статус оплаты… Не оплачивайте повторно.' : 'Получаем QR-код для оплаты…' }}</p>
         <p v-if="error" class="sbp-payment-error" role="alert">{{ error }}</p>
-        <p v-if="cancellationNotice" class="sbp-payment-error" role="status">{{ cancellationNotice }}</p>
     </section>
 </template>
 

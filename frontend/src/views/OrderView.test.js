@@ -102,6 +102,20 @@ afterEach(() => {
 });
 
 describe('OrderView fixed actions', () => {
+    it('returns home immediately when leaving SBP without waiting for provider cancellation', async () => {
+        createSbpPayment.mockResolvedValue({ payment: {
+            id: 'sbp-91', order_id: 91, status: 'pending', amount_minor: 125000, currency: 'RUB',
+            qr_payload: 'https://bank.example/pay', expires_at: new Date(Date.now() + 600000).toISOString(),
+        } });
+        await openOrder({ payment_method: 'sbp' });
+        await button('Отменить и начать заново').trigger('click');
+        await flushPromises();
+        expect(router.currentRoute.value.path).toBe('/');
+        expect(paymentStore.phase).toBe('idle');
+        expect(orderStore.order).toEqual({});
+        expect(orderStore.paidOrder).not.toHaveBeenCalled();
+    });
+
     it('uses the backend-paid SBP order without calling the client paid endpoint or devices', async () => {
         createSbpPayment.mockResolvedValue({
             payment: { id: 'sbp-91', order_id: 91, status: 'paid', amount_minor: 125000, currency: 'RUB' },

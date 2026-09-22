@@ -8,7 +8,12 @@ import FixedActions from "@/components/FixedActions.vue";
 import ProgramOptionsDialog from "@/components/ProgramOptionsDialog.vue";
 
 const propertyStore = usePropertyStore();
-const { property } = storeToRefs(propertyStore);
+const { property, hasAdditionalServices } = storeToRefs(propertyStore);
+
+const selectProgram = programId => {
+    propertyStore.resetAddons();
+    propertyStore.setProgram(programId);
+};
 
 const expandedProgramId = ref(null);
 const toggleDescriptions = programId => {
@@ -73,7 +78,8 @@ const selectedProgram = computed(() => programCards.value.find(program => progra
                 :style="{ '--gradient-opacity': 0.22 + 0.53 * (index / Math.max(1, programCards.length - 1)) ** 1.5 }"
             >
                 <router-link
-                    :to="`/programs/${program.id}`"
+                    :to="`/programs/${program.id}${hasAdditionalServices ? '' : '/preorder'}`"
+                    @click="selectProgram(program.id)"
                     class="program-card-link"
                     :aria-label="`Выбрать программу ${program.name}`"
                 />

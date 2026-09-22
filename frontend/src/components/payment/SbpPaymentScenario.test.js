@@ -48,73 +48,46 @@ it('does not confirm a mismatched payment or unconfirmed order', async () => {
     expect(wrapper.text()).toContain('Не оплачивайте повторно');
 });
 
-it('keeps polling after a network error and hides expired QR without assuming failure', async () => {
-    await open();
-    getSbpPayment.mockRejectedValue(new Error('Нет связи'));
-    await vi.advanceTimersByTimeAsync(61000);
-    expect(wrapper.find('img').exists()).toBe(false);
-    expect(wrapper.emitted('failed')).toBeUndefined();
-    getSbpPayment.mockResolvedValue({ payment: { ...payment, status: 'expired' } });
-    await vi.advanceTimersByTimeAsync(2000);
-    expect(wrapper.emitted('failed')).toHaveLength(1);
-});
-
-it('handles payment winning a cancellation race', async () => {
-    await open();
-    const paid = { ...order, status: 'paid' };
-    cancelSbpPayment.mockResolvedValue({ payment: { ...payment, status: 'paid' }, order: paid });
-    await wrapper.vm.actions[0].run();
-    expect(wrapper.emitted('server-paid')).toEqual([[paid]]);
-    expect(wrapper.emitted('canceled')).toBeUndefined();
-});
-
-it('queues cancellation during a status check instead of disabling or losing the click', async () => {
+it('leaves immediately during a status request and ignores its late paid response', async () => {
     await open();
     let resolveStatus;
     getSbpPayment.mockImplementation(() => new Promise(resolve => { resolveStatus = resolve; }));
     await vi.advanceTimersByTimeAsync(2000);
     expect(wrapper.vm.actions[0].disabled).toBe(false);
     await wrapper.vm.actions[0].run();
-    expect(wrapper.vm.actions[0].disabled).toBe(true);
+    expect(wrapper.emitted('abandoned')).toHaveLength(1);
     expect(cancelSbpPayment).not.toHaveBeenCalled();
-    cancelSbpPayment.mockResolvedValue({ payment: { ...payment, status: 'canceled' } });
-    resolveStatus({ payment });
+    resolveStatus({ payment: { ...payment, status: 'paid' }, order: { ...order, status: 'paid' } });
     await flushPromises();
-    expect(cancelSbpPayment).toHaveBeenCalledTimes(1);
-    expect(wrapper.emitted('canceled')).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(wrapper.emitted('server-paid')).toBeUndefined();
+    expect(wrapper.emitted('canceled')).toBeUndefined();
+    expect(getSbpPayment).toHaveBeenCalledTimes(1);
 });
 
-it('limits payment to ten minutes without resetting the deadline during polling', async () => {
+it('leaves the kiosk after ten minutes without canceling the provider payment', async () => {
     payment.expires_at = new Date(Date.now() + 1200000).toISOString();
     await open();
     expect(wrapper.text()).toContain('10:00');
     await vi.advanceTimersByTimeAsync(599000);
     expect(wrapper.text()).toContain('00:01');
-    expect(cancelSbpPayment).not.toHaveBeenCalled();
-    cancelSbpPayment.mockResolvedValue({ payment: { ...payment, status: 'canceled' } });
+    expect(wrapper.emitted('abandoned')).toBeUndefined();
     await vi.advanceTimersByTimeAsync(1000);
-    expect(cancelSbpPayment).toHaveBeenCalledTimes(1);
-    expect(wrapper.emitted('canceled')).toHaveLength(1);
+    expect(wrapper.emitted('abandoned')).toHaveLength(1);
+    expect(cancelSbpPayment).not.toHaveBeenCalled();
 });
 
-it('keeps the screen on cancellation failure and allows retry', async () => {
+it('can leave while the initial QR request is still in flight', async () => {
+    let resolveCreate;
+    createSbpPayment.mockImplementation(() => new Promise(resolve => { resolveCreate = resolve; }));
     await open();
-    cancelSbpPayment.mockRejectedValueOnce(new Error('Нет связи'));
-    await wrapper.vm.actions[0].run();
-    expect(wrapper.emitted('canceled')).toBeUndefined();
-    expect(wrapper.vm.actions[0].disabled).toBe(false);
-    cancelSbpPayment.mockResolvedValue({ payment: { ...payment, status: 'canceled' } });
-    await wrapper.vm.actions[0].run();
-    expect(wrapper.emitted('canceled')).toHaveLength(1);
-});
-
-it('explains an unconfirmed cancellation and keeps the notice during polling', async () => {
-    await open();
-    await wrapper.vm.actions[0].run();
-    expect(wrapper.text()).toContain('Отмена пока не подтверждена');
-    expect(wrapper.emitted('canceled')).toBeUndefined();
-    await vi.advanceTimersByTimeAsync(2000);
-    expect(wrapper.text()).toContain('Отмена пока не подтверждена');
+    await wrapper.vm.actions.find(action => action.id === 'cancel').run();
+    expect(wrapper.emitted('abandoned')).toHaveLength(1);
+    resolveCreate({ payment });
+    await flushPromises();
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(getSbpPayment).not.toHaveBeenCalled();
+    expect(cancelSbpPayment).not.toHaveBeenCalled();
 });
 
 it('retries ambiguous creation with the same order and stops polling after unmount', async () => {

@@ -31,6 +31,7 @@ beforeEach(async () => {
         routes: [
             { path: '/programs/:programId/preorder', component: PreorderView },
             { path: '/programs/:programId', component: { template: '<div>Программа</div>' } },
+            { path: '/programs', component: { template: '<div>Программы</div>' } },
             { path: '/order/:orderId', component: { template: '<div>Заказ</div>' } },
         ],
     });
@@ -46,6 +47,18 @@ afterEach(() => {
 });
 
 describe('Preorder payment tiles', () => {
+    it('returns to the program list when there are no additional services', () => {
+        expect(document.querySelector('.fixed-actions [aria-label="Назад"]').getAttribute('href')).toBe('/programs');
+    });
+
+    it('returns to the program and preserves selected additional services when they exist', async () => {
+        propertyStore.property.is_dry_open = true;
+        propertyStore.property.addons = [{ id: 2, name: 'Услуга', price: 100, isActive: true }];
+        await flushPromises();
+        expect(document.querySelector('.fixed-actions [aria-label="Назад"]').getAttribute('href')).toBe('/programs/1');
+        expect(propertyStore.order.total_amount).toBe(1350);
+    });
+
     it('creates an SBP order when enabled by the post API, without duplicate tiles', async () => {
         propertyStore.post.payment_methods = ['card', 'sbp', 'cash'];
         await flushPromises();

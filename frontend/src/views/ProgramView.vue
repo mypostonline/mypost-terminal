@@ -12,7 +12,7 @@ const route = useRoute();
 const router = useRouter();
 
 const propertyStore = usePropertyStore();
-const { property, program, order } = storeToRefs(propertyStore);
+const { property, program, order, hasAdditionalServices } = storeToRefs(propertyStore);
 const showOptions = ref(false);
 const optionKey = option => option.id != null ? String(option.id) : `name:${String(option.name || '').trim().toLowerCase()}`;
 const detailProgram = computed(() => {
@@ -44,6 +44,10 @@ onBeforeMount(() => {
     propertyStore.resetAddons();
     if (!propertyStore.setProgram(route.params.programId)) {
         router.replace('/programs');
+        return;
+    }
+    if (!hasAdditionalServices.value) {
+        router.replace(`/programs/${program.value.id}/preorder`);
     }
 });
 
@@ -91,7 +95,7 @@ const isExcludedAddon = (addon) => {
         </div>
         <ProgramOptionsDialog :program="showOptions ? detailProgram : null" @close="showOptions = false" />
 
-        <template v-if="property?.is_dry_open && property?.addons?.length">
+            <template v-if="hasAdditionalServices">
             <h2 class="font-semibold text-(--primary-color) mb-2 mt-6">Выбор дополнительных программ</h2>
             <div class="property-addons addons">
                 <button

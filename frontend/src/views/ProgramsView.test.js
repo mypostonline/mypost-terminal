@@ -20,6 +20,7 @@ beforeEach(async () => {
     propertyStore = usePropertyStore(pinia);
     propertyStore.property = {
         is_dry_open: true,
+        addons: [{ id: 1, name: 'Дополнительная услуга', price: 100 }],
         programs: [
             { id: 1, name: 'Стандарт', description: 'Базовая мойка', duration: 5, price: 300,
                 options: [{ id: 1, name: 'Вода' }, { id: 2, name: 'Пена', image: '/foam.svg', description: 'Удаляет загрязнения с кузова' }] },
@@ -31,6 +32,7 @@ beforeEach(async () => {
         { path: '/', component: { template: '<div />' } },
         { path: '/programs', component: ProgramsView },
         { path: '/programs/:programId', component: { template: '<div>Программа</div>' } },
+        { path: '/programs/:programId/preorder', component: { template: '<div>Предзаказ</div>' } },
     ] });
     await router.push('/programs');
     wrapper = mount(ProgramsView, { attachTo: document.body, global: { plugins: [pinia, router] } });
@@ -46,6 +48,28 @@ afterEach(() => {
 });
 
 describe('program comparison cards', () => {
+    it.each([undefined, null, []])('opens preorder directly without additional services (%s)', async addons => {
+        propertyStore.setProgram(2);
+        propertyStore.property.addons = addons;
+        await flushPromises();
+        await cards()[0].get('.program-card-link').trigger('click');
+        await flushPromises();
+        expect(router.currentRoute.value.path).toBe('/programs/1/preorder');
+        expect(propertyStore.program.id).toBe(1);
+        expect(propertyStore.order.total_amount).toBe(300);
+    });
+
+    it('skips unavailable additional services and resets the previous selection', async () => {
+        propertyStore.property.is_dry_open = false;
+        propertyStore.property.addons[0].isActive = true;
+        await flushPromises();
+        await cards()[0].get('.program-card-link').trigger('click');
+        await flushPromises();
+        expect(router.currentRoute.value.path).toBe('/programs/1/preorder');
+        expect(propertyStore.order.addons).toEqual([]);
+        expect(propertyStore.order.total_amount).toBe(300);
+    });
+
     it('shows names, descriptions, prices and duration without the old image background', () => {
         expect(cards()).toHaveLength(2);
         expect(cards()[0].get('.program-card-name').text()).toBe('Стандарт');

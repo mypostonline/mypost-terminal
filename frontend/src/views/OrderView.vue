@@ -427,6 +427,7 @@ onBeforeUnmount(() => {
             @failed="setPaymentFailed"
             @attention="handlePaymentAttention"
             @canceled="handlePaymentCanceled"
+            @abandoned="handlePaymentCanceled"
         />
 
         <template v-else-if="paymentState === 'reconciling'">

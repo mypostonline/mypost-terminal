@@ -30,6 +30,9 @@ export const usePropertyStore = defineStore('propertyStore', () => {
     const property = ref({});
     const post = ref(null);
     const program = ref({});
+    const hasAdditionalServices = computed(() => Boolean(
+        property.value.is_dry_open && property.value.addons?.length
+    ));
     const configurationError = ref(
         CONFIGURATION_VALID
             ? ''
@@ -329,6 +332,7 @@ export const usePropertyStore = defineStore('propertyStore', () => {
         property,
         post,
         program,
+        hasAdditionalServices,
         order,
         configurationError,
         init,
