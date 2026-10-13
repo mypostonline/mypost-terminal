@@ -103,10 +103,95 @@ const wireEvents = ({
     });
 
     subscribe(cashPayments, 'event', event => {
+        if (event.event === 'attention_required' &&
+            event.session?.error?.startsWith('cash_fiscalization_')) {
+            const session = event.session;
+            logger.error(
+                session.completedAt || new Date().toISOString(),
+                '[Cash fiscalization attention required]',
+                JSON.stringify({
+                    orderId: session.orderId,
+                    sessionId: session.id,
+                    vendotekEventNumberAttempted:
+                        session.fiscalization?.attemptedEventNumber ?? null,
+                    amountMinor: session.fiscalization?.amountMinor ?? null,
+                    fiscalizationState: session.fiscalization?.state ?? null,
+                    sessionStartedAt: session.createdAt,
+                    fiscalizationStartedAt:
+                        session.fiscalization?.startedAt ?? null,
+                    terminalHost: cardTerminal.getState().host ?? null,
+                    terminalDriver: cardTerminal.driver || 'unknown',
+                })
+            );
+        }
+        if (event.event === 'completed' &&
+            event.session?.fiscalization?.state === 'completed') {
+            const session = event.session;
+            logger.log(
+                session.fiscalization.completedAt || new Date().toISOString(),
+                '[Cash fiscalization completed]',
+                JSON.stringify({
+                    orderId: session.orderId,
+                    sessionId: session.id,
+                    vendotekEventNumber: session.fiscalization.eventNumber ?? null,
+                    vendotekLocalTime:
+                        session.fiscalization.vendotekLocalTime ?? null,
+                    amountMinor: session.fiscalization.amountMinor,
+                    acceptedAmountMinor: session.acceptedAmountMinor,
+                    productId: session.productId,
+                    productName: session.productName,
+                    sessionStartedAt: session.createdAt,
+                    fiscalizationStartedAt:
+                        session.fiscalization.startedAt ?? null,
+                    terminalHost: cardTerminal.getState().host ?? null,
+                    terminalDriver: cardTerminal.driver || 'unknown',
+                })
+            );
+        }
         broadcast({ channel: 'cash-payment', payload: event });
     });
 
     subscribe(cardPayments, 'event', event => {
+        if (event.event === 'attention_required' && event.session) {
+            const session = event.session;
+            logger.error(
+                session.completedAt || new Date().toISOString(),
+                '[Card payment attention required]',
+                JSON.stringify({
+                    orderId: session.orderId,
+                    sessionId: session.id,
+                    vendotekOperationNumberAttempted:
+                        session.attemptedOperationNumber ?? null,
+                    amountMinor: session.approvedAmountMinor ||
+                        session.targetAmountMinor,
+                    sessionStartedAt: session.createdAt,
+                    approvedAt: session.approvedAt ?? null,
+                    terminalHost: cardTerminal.getState().host ?? null,
+                    terminalDriver: cardTerminal.driver || 'unknown',
+                    errorCode: session.error,
+                })
+            );
+        }
+        if (event.event === 'completed' && event.session) {
+            const session = event.session;
+            logger.log(
+                session.completedAt || new Date().toISOString(),
+                '[Card payment completed]',
+                JSON.stringify({
+                    orderId: session.orderId,
+                    sessionId: session.id,
+                    vendotekOperationNumber: session.operationNumber ?? null,
+                    vendotekLocalTime: session.vendotekLocalTime ?? null,
+                    amountMinor: session.approvedAmountMinor,
+                    productId: session.productId,
+                    productName: session.productName,
+                    sessionStartedAt: session.createdAt,
+                    approvedAt: session.approvedAt ?? null,
+                    terminalHost: cardTerminal.getState().host ?? null,
+                    terminalDriver: cardTerminal.driver || 'unknown',
+                })
+            );
+        }
         broadcast({ channel: 'card-payment', payload: event });
     });
 

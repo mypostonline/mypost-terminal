@@ -313,7 +313,8 @@ test('does not automatically retry an unconfirmed cash sale', async () => {
         }),
         error => (
             error.code === 'cash_fiscalization_outcome_unknown' &&
-            error.outcomeUnknown === true
+            error.outcomeUnknown === true &&
+            error.attemptedEventNumber === 1
         )
     );
 

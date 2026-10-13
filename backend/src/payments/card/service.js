@@ -169,10 +169,13 @@ class CardPaymentService extends EventEmitter {
             productId,
             productName,
             operationNumber: null,
+            attemptedOperationNumber: null,
+            vendotekLocalTime: null,
             error: null,
             reason: null,
             createdAt: now,
             updatedAt: now,
+            approvedAt: null,
             completedAt: null,
         };
         this.emitSession('session_started');
@@ -266,10 +269,12 @@ class CardPaymentService extends EventEmitter {
                 state: 'finalizing',
                 approvedAmountMinor: Number(payment.approvedAmount),
                 operationNumber: payment.operationNumber ?? null,
+                vendotekLocalTime: payment.response?.localTime ?? null,
+                approvedAt: new Date().toISOString(),
             });
             this.emitSession('approved');
 
-            await this.terminal.finalizeSuccess(
+            const finalization = await this.terminal.finalizeSuccess(
                 this.session.approvedAmountMinor,
                 this.session.productId,
                 this.session.productName,
@@ -277,6 +282,9 @@ class CardPaymentService extends EventEmitter {
 
             this.updateSession({
                 state: 'completed',
+                vendotekLocalTime:
+                    finalization?.finResponse?.localTime ??
+                    this.session.vendotekLocalTime,
                 completedAt: new Date().toISOString(),
             });
             this.emitSession('completed');
@@ -287,6 +295,9 @@ class CardPaymentService extends EventEmitter {
 
             this.updateSession({
                 state: 'attention_required',
+                attemptedOperationNumber:
+                    error.attemptedOperationNumber ??
+                    this.session?.operationNumber ?? null,
                 error: paymentWasApproved
                     ? 'card_finalization_outcome_unknown'
                     : 'card_payment_outcome_unknown',

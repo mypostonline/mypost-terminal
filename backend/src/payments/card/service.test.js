@@ -41,7 +41,9 @@ class FakeTerminal {
         if (this.finalizeError) {
             throw this.finalizeError;
         }
-        return { ok: true };
+        return {
+            finResponse: { localTime: '20261013T140000+0300' },
+        };
     }
 }
 
@@ -62,6 +64,8 @@ test('reuses a completed session for the same order', async () => {
 
     assert.equal(firstSession.id, secondSession.id);
     assert.equal(secondSession.state, 'completed');
+    assert.equal(secondSession.vendotekLocalTime, '20261013T140000+0300');
+    assert.ok(secondSession.approvedAt);
     assert.equal(terminal.startCalls, 1);
     assert.equal(terminal.finalizeCalls, 1);
 });
@@ -165,6 +169,7 @@ test('requires operator attention when finalization outcome is unknown', async (
     assert.equal(session.state, 'attention_required');
     assert.equal(session.error, 'card_finalization_outcome_unknown');
     assert.equal(session.approvedAmountMinor, 10_000);
+    assert.equal(session.attemptedOperationNumber, 7);
 });
 
 test('rejects a payment when the card terminal is unavailable', () => {

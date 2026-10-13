@@ -106,12 +106,19 @@ test('fiscalizes a completed cash sale before approving it', async () => {
         eventName: 'CSAPP',
     });
 
-    resolveFiscalization({ eventNumber: 7 });
+    resolveFiscalization({
+        eventNumber: 7,
+        response: { localTime: '20261013T140000+0300' },
+    });
     const completed = await service.waitForSettlement();
 
     assert.equal(completed.state, 'completed');
     assert.equal(completed.fiscalization.state, 'completed');
     assert.equal(completed.fiscalization.eventNumber, 7);
+    assert.equal(
+        completed.fiscalization.vendotekLocalTime,
+        '20261013T140000+0300'
+    );
     assert.ok(events.includes('fiscalization_started'));
     assert.equal(events.at(-1), 'completed');
 });
@@ -121,6 +128,7 @@ test('requires attention when the fiscalization outcome is unknown', async () =>
         registerCashSale: async () => {
             const error = new Error('Vendotek response timeout');
             error.outcomeUnknown = true;
+            error.attemptedEventNumber = 8;
             throw error;
         },
     });
@@ -139,6 +147,7 @@ test('requires attention when the fiscalization outcome is unknown', async () =>
     assert.equal(session.state, 'attention_required');
     assert.equal(session.error, 'cash_fiscalization_outcome_unknown');
     assert.equal(session.fiscalization.state, 'outcome_unknown');
+    assert.equal(session.fiscalization.attemptedEventNumber, 8);
 
     await assert.rejects(
         service.start({

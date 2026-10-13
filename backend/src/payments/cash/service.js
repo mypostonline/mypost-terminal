@@ -311,6 +311,8 @@ class CashPaymentService extends EventEmitter {
                 ? {
                     state: 'pending',
                     eventNumber: null,
+                    attemptedEventNumber: null,
+                    vendotekLocalTime: null,
                     amountMinor: normalizedAmount,
                     error: null,
                     completedAt: null,
@@ -514,6 +516,7 @@ class CashPaymentService extends EventEmitter {
                     ...this.session.fiscalization,
                     state: 'completed',
                     eventNumber: result.eventNumber ?? null,
+                    vendotekLocalTime: result.response?.localTime ?? null,
                     completedAt,
                 },
             });
@@ -537,6 +540,8 @@ class CashPaymentService extends EventEmitter {
                     state: error.outcomeUnknown
                         ? 'outcome_unknown'
                         : 'failed',
+                    attemptedEventNumber:
+                        error.attemptedEventNumber ?? null,
                     error: errorCode,
                     reason: error.message,
                     completedAt,

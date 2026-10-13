@@ -28,6 +28,32 @@ npm start
 По умолчанию HTTP-сервер слушает порт `3001`, а WebSocket доступен по
 пути `/ws`.
 
+После успешной карточной оплаты backend пишет в стандартный журнал строку
+`[Card payment completed]` с `orderId`, `sessionId`, `vendotekOperationNumber`,
+суммой в копейках (`amountMinor`), `productId`, `productName`, временем начала
+сеанса (`sessionStartedAt`), одобрения (`approvedAt`) и завершения (в начале
+строки), а также `terminalHost` и `terminalDriver`. `vendotekLocalTime` берётся
+из ответа терминала, если он его прислал; это поле может быть `null`. Время
+backend указано в UTC. Запись появляется и при `DEBUG=false`; для проверки на
+настоящем устройстве выбирайте строки с `"terminalDriver":"vendotek"`.
+
+Для наличной оплаты с фискализацией через Vendotek ищите
+`[Cash fiscalization completed]`. В ней указаны `orderId`,
+`vendotekEventNumber` события `CSAPP`, сумма чека `amountMinor` и фактически
+принятая сумма `acceptedAmountMinor`. При оплате с переплатой эти суммы
+различаются. Также записываются `sessionId`, `productId`, `productName`,
+`sessionStartedAt`, `fiscalizationStartedAt`, `terminalHost`, `terminalDriver`
+и доступное `vendotekLocalTime`. Время завершения указано в начале строки.
+Если фискализация отключена, такая запись не создаётся. Эти номера относятся
+к протоколу Vendotek и сами по себе не являются номерами чеков 1-ОФД.
+
+Если результат запроса остался неизвестным, backend пишет
+`[Cash fiscalization attention required]` или
+`[Card payment attention required]`. Поля `vendotekEventNumberAttempted` и
+`vendotekOperationNumberAttempted` означают только отправленный номер:
+подтверждения оплаты или фискализации в этом случае нет. Такие записи нужно
+проверять по выгрузке 1-ОФД вручную.
+
 ## Настройка оборудования
 
 Активность устройств и конкретный драйвер настраиваются независимо:

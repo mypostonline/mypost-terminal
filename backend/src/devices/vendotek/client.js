@@ -566,6 +566,9 @@ class VtkClient extends EventEmitter {
                 ? 'cash_fiscalization_outcome_unknown'
                 : 'cash_fiscalization_failed';
             error.outcomeUnknown = requestSent;
+            error.attemptedEventNumber = requestSent
+                ? eventNumber
+                : null;
 
             if (requestSent) {
                 this.recoverFromOperationError(

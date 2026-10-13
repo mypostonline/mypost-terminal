@@ -301,6 +301,8 @@ class VendotekPaymentController {
                 response,
             };
         } catch (error) {
+            error.attemptedOperationNumber =
+                this.currentOperation?.operationNumber ?? null;
             this.recoverFromOperationError('payment_error', error);
             throw error;
         } finally {
