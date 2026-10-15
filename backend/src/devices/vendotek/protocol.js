@@ -236,6 +236,9 @@ function tlvsToObject(tlvs) {
             case 0x09:
                 result.productId = value.toString('ascii');
                 break;
+            case 0x0a:
+                result.fiscalQr = value.toString('ascii');
+                break;
             case 0x0f:
                 result.productName = value.toString('ascii');
                 break;

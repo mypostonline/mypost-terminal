@@ -2,6 +2,7 @@ import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
 import { subscribeMqtt } from '@/functions/mqtt.js';
 import api from '@/functions/api.js';
+import { deriveAddonSelection } from '@/functions/addonSelection.js';
 import {
     calculateCashbackAmount,
     getCashbackLoyalty,
@@ -38,6 +39,17 @@ export const usePropertyStore = defineStore('propertyStore', () => {
             ? ''
             : 'Не заданы корректные VITE_PROPERTY_ID и VITE_POST_ID'
     );
+    let selectedAddonIds = new Set();
+
+    const syncAddons = () => {
+        if (Array.isArray(property.value.addons)) {
+            property.value.addons = deriveAddonSelection(
+                property.value.addons,
+                program.value,
+                selectedAddonIds
+            );
+        }
+    };
 
     const supportState = ref('idle');
     const supportError = ref('');
@@ -69,6 +81,7 @@ export const usePropertyStore = defineStore('propertyStore', () => {
             property.value.addons?.forEach(addon => {
                 if (
                     addon.isActive &&
+                    !addon.isExcluded &&
                     !addon.isComposite &&
                     !addon.isIncluded
                 ) {
@@ -98,80 +111,45 @@ export const usePropertyStore = defineStore('propertyStore', () => {
     });
 
     const resetAddons = () => {
-        property.value.addons?.forEach(addon => {
-            addon.isActive = false;
-            addon.isIncluded = false;
-            addon.isComposite = false;
-        });
-    };
-
-    const applyIncludedAddons = selectedProgram => {
-        if (
-            !selectedProgram?.included_addons?.length ||
-            !property.value.addons?.length
-        ) {
-            return;
-        }
-
-        const includedIds = new Set(
-            selectedProgram.included_addons.map(addon => addon.id)
-        );
-        property.value.addons.forEach(addon => {
-            if (includedIds.has(addon.id)) {
-                addon.isActive = true;
-                addon.isIncluded = true;
-            }
-        });
+        selectedAddonIds = new Set();
+        syncAddons();
     };
 
     const setProgram = programId => {
-        const id = Number.parseInt(programId, 10);
         const selectedProgram = property.value.programs?.find(
-            item => item.id === id
+            item => String(item.id) === String(programId)
         );
 
+        selectedAddonIds = new Set();
         if (!selectedProgram) {
             program.value = {};
+            syncAddons();
             return false;
         }
 
         program.value = selectedProgram;
-        applyIncludedAddons(selectedProgram);
+        syncAddons();
         return true;
     };
 
-    const preserveAddonState = nextAddons => {
-        const currentState = new Map(
-            (property.value.addons || []).map(addon => [
-                addon.id,
-                {
-                    isActive: addon.isActive,
-                    isIncluded: addon.isIncluded,
-                    isComposite: addon.isComposite,
-                },
-            ])
-        );
-
-        return (nextAddons || []).map(addon => ({
-            ...addon,
-            ...(currentState.get(addon.id) || {}),
-        }));
-    };
-
     const setProperty = data => {
-        const selectedProgramId = program.value?.id;
-        property.value = {
-            ...data,
-            addons: preserveAddonState(data.addons),
-        };
-        post.value = data.posts?.find(item => item.id === POST_ID) || null;
-
-        if (selectedProgramId) {
-            const refreshedProgram = property.value.programs?.find(
-                item => item.id === selectedProgramId
-            );
-            program.value = refreshedProgram || {};
+        const sameProperty = String(property.value?.id) === String(data?.id);
+        const selectedProgramId = sameProperty ? program.value?.id : null;
+        if (!sameProperty) {
+            selectedAddonIds = new Set();
         }
+        property.value = data;
+        post.value = data.posts?.find(item => item.id === POST_ID) || null;
+        program.value = property.value.programs?.find(
+            item => String(item.id) === String(selectedProgramId)
+        ) || {};
+        const availableIds = new Set((property.value.addons || []).map(addon => String(addon.id)));
+        selectedAddonIds = new Set([...selectedAddonIds].filter(id => availableIds.has(id)));
+        syncAddons();
+        selectedAddonIds = new Set([...selectedAddonIds].filter(id => {
+            const addon = property.value.addons?.find(item => String(item.id) === id);
+            return addon && !addon.isExcluded && !addon.isIncluded;
+        }));
 
         if (property.value.id && !propertySubscriptionStarted) {
             propertySubscriptionStarted = true;
@@ -245,34 +223,20 @@ export const usePropertyStore = defineStore('propertyStore', () => {
 
     const selectAddon = addon => {
         const selectedAddon = property.value.addons?.find(
-            item => item.id === addon.id
+            item => String(item.id) === String(addon?.id)
         );
-        if (!selectedAddon || selectedAddon.isIncluded) {
-            return;
-        }
-        if (
-            selectedAddon.options?.length === 1 &&
-            selectedAddon.isComposite
-        ) {
+        if (!program.value?.id || !selectedAddon || selectedAddon.isIncluded ||
+            selectedAddon.isExcluded || selectedAddon.isComposite) {
             return;
         }
 
-        const isActive = !selectedAddon.isActive;
-
-        if (selectedAddon.options?.length > 1) {
-            selectedAddon.options.forEach(option => {
-                const childAddon = property.value.addons.find(candidate => {
-                    return candidate.options?.length === 1 &&
-                        candidate.options[0].id === option.id;
-                });
-                if (childAddon) {
-                    childAddon.isActive = isActive;
-                    childAddon.isComposite = isActive;
-                }
-            });
+        const id = String(selectedAddon.id);
+        if (selectedAddonIds.has(id)) {
+            selectedAddonIds.delete(id);
+        } else {
+            selectedAddonIds.add(id);
         }
-
-        selectedAddon.isActive = isActive;
+        syncAddons();
     };
 
     const startSupportCooldown = () => {
@@ -337,6 +301,7 @@ export const usePropertyStore = defineStore('propertyStore', () => {
         configurationError,
         init,
         getProperty,
+        setProperty,
         setProgram,
         resetAddons,
         selectAddon,

@@ -106,6 +106,14 @@ const loadConfig = ({
                 { min: 1 }
             ),
         },
+        fiscalReceiptSync: {
+            apiUrl: env.FISCAL_RECEIPT_API_URL || '',
+            outboxFile: env.FISCAL_RECEIPT_OUTBOX_FILE ||
+                path.resolve(__dirname, '../../data/fiscal-receipt-outbox.json'),
+            timezoneOffsetMinutes: readNumber(
+                env, 'FISCAL_RECEIPT_TZ_OFFSET_MINUTES', 180
+            ),
+        },
         billAcceptor: {
             enabled: billAcceptorEnabled,
             driver: billAcceptorDriver,

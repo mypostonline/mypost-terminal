@@ -9,6 +9,7 @@
     line-height: 1.45;
     color: #000000;
     white-space: pre-line;
+    font-weight: 500;
 }
 
 .program-card-help {
@@ -37,7 +38,7 @@
 
 .program-card-options {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.3rem;
     padding: 0;
     margin: 0;
@@ -175,7 +176,7 @@
     display: grid;
     place-items: center;
     width: 100%;
-    max-width: 3rem;
+    max-width: 2rem;
     aspect-ratio: 1;
 }
 

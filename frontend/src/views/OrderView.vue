@@ -36,6 +36,7 @@ const paymentStore = usePaymentStore();
 const {
     phase: storedPaymentPhase,
     paidAmount: storedPaidAmount,
+    vendotekOperationNumber: storedVendotekOperationNumber,
     orderSnapshot,
 } = storeToRefs(paymentStore);
 
@@ -204,7 +205,10 @@ const synchronizePaidOrder = async () => {
         const paidOrderId = order.value.id;
         await orderStore.paidOrder(
             paidOrderId,
-            Number(storedPaidAmount.value)
+            Number(storedPaidAmount.value),
+            paymentMethodCode.value === 'card'
+                ? storedVendotekOperationNumber.value
+                : null
         );
         const refreshedOrder = await orderStore.refreshOrder(paidOrderId);
         if (!refreshedOrder?.id) {
@@ -227,14 +231,14 @@ const synchronizePaidOrder = async () => {
     }
 };
 
-const handlePaymentApproved = async paidAmount => {
+const handlePaymentApproved = async (paidAmount, vendotekOperationNumber = null) => {
     if (paymentState.value !== 'processing') {
         return;
     }
 
     const normalizedPaidAmount = Number(paidAmount);
     const expectedAmount = Number(order.value.total_amount);
-    paymentStore.markApproved(normalizedPaidAmount);
+    paymentStore.markApproved(normalizedPaidAmount, vendotekOperationNumber);
 
     const amountIsValid = Number.isFinite(normalizedPaidAmount) &&
         Number.isFinite(expectedAmount) &&

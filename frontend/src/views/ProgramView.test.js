@@ -80,3 +80,39 @@ it('opens descriptions only from help and closes the shared modal', async () => 
     await wrapper.get('.program-options-close').trigger('click');
     expect(wrapper.get('dialog').attributes('open')).toBeUndefined();
 });
+
+it('releases included and excluded options after returning to choose a different program', async () => {
+    propertyStore.property.addons = [
+        { id: 1, name: 'Включённая', price: 100, options: [{ id: 11 }] },
+        { id: 2, name: 'Исключённая', price: 200, options: [{ id: 12 }] },
+    ];
+    propertyStore.property.programs[0].included_addons = [{ id: 1 }];
+    propertyStore.property.programs[0].excluded_addons = [{ id: 2 }];
+    propertyStore.setProgram(1);
+    await flushPromises();
+    expect(wrapper.findAll('.property-addons button').map(button => button.element.disabled)).toEqual([true, true]);
+    expect(propertyStore.order.total_amount).toBe(300);
+
+    wrapper.unmount();
+    await router.push('/programs');
+    await router.push('/programs/2');
+    wrapper = mount(ProgramView, { attachTo: document.body, global: { plugins: [pinia, router] } });
+    await flushPromises();
+    expect(wrapper.findAll('.property-addons button').map(button => button.element.disabled)).toEqual([false, false]);
+    await wrapper.findAll('.property-addons button')[0].trigger('click');
+    expect(propertyStore.order.total_amount).toBe(600);
+    expect(propertyStore.order.addons).toEqual([{ id: 1, quantity: 1 }]);
+});
+
+it('keeps ordinary selected options when returning from preorder to the same program', async () => {
+    await wrapper.get('.property-addons button').trigger('click');
+    expect(propertyStore.order.total_amount).toBe(400);
+
+    wrapper.unmount();
+    await router.push('/programs/1/preorder');
+    await router.push('/programs/1');
+    wrapper = mount(ProgramView, { attachTo: document.body, global: { plugins: [pinia, router] } });
+    await flushPromises();
+    expect(wrapper.get('.property-addons button').classes()).toContain('--active');
+    expect(propertyStore.order.total_amount).toBe(400);
+});

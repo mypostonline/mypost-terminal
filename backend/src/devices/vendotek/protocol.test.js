@@ -46,3 +46,9 @@ test('supports BER lengths larger than one byte', () => {
     assert.equal(decoded[0].tag, 0x13);
     assert.deepEqual(decoded[0].value, value);
 });
+
+test('decodes fiscal QR from Vendotek tag 0x0a', () => {
+    const qr = 't=20261013T1206&s=50.00&fn=7381440901358112&i=247&fp=88689612&n=1';
+    const message = tlvsToObject(decodeTlvs(encodeTlv(0x0a, encodeAscii(qr))));
+    assert.equal(message.fiscalQr, qr);
+});

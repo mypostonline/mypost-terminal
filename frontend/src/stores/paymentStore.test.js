@@ -24,12 +24,15 @@ describe('payment store', () => {
         expect(store.isRecoverableOrder(42)).toBe(true);
 
         store.markProcessing(order);
-        store.markApproved(500);
+        store.markApproved(500, 347);
         expect(store.phase).toBe('reconciling');
+        expect(store.vendotekOperationNumber).toBe('347');
         expect(store.isNavigationLocked).toBe(true);
 
         store.markCompleted();
         expect(store.isNavigationLocked).toBe(false);
+        store.clear();
+        expect(store.vendotekOperationNumber).toBeNull();
     });
 
     it('does not persist or restore reconciliation after a reload', () => {

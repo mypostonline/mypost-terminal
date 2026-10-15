@@ -7,6 +7,7 @@ import { getNumber, getPrice, wordEndPasses } from "@/functions/helpers.js";
 import CallSupportComponent from "@/components/CallSupportComponent.vue";
 import FixedActions from "@/components/FixedActions.vue";
 import ProgramOptionsDialog from "@/components/ProgramOptionsDialog.vue";
+import ProgramPopularBadge from "@/components/ProgramPopularBadge.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -41,8 +42,8 @@ const detailProgram = computed(() => {
 });
 
 onBeforeMount(() => {
-    propertyStore.resetAddons();
-    if (!propertyStore.setProgram(route.params.programId)) {
+    if (String(program.value?.id) !== String(route.params.programId) &&
+        !propertyStore.setProgram(route.params.programId)) {
         router.replace('/programs');
         return;
     }
@@ -50,13 +51,6 @@ onBeforeMount(() => {
         router.replace(`/programs/${program.value.id}/preorder`);
     }
 });
-
-const isExcludedAddon = (addon) => {
-    if (program.value?.excluded_addons?.length) {
-        return program.value.excluded_addons.findIndex(item => item.id === addon.id) !== -1;
-    }
-    return false;
-}
 
 </script>
 
@@ -67,7 +61,10 @@ const isExcludedAddon = (addon) => {
         <div class="property-program-details program-card-surface">
             <div class="header">
                 <div class="program-details-heading">
-                    <h2 class="name">{{ program.name }}</h2>
+                    <div class="program-details-title">
+                        <h2 class="name">{{ program.name }}</h2>
+                        <program-popular-badge v-if="program.popular" />
+                    </div>
                     <p v-if="detailProgram.description" class="program-card-description">{{ detailProgram.description }}</p>
                 </div>
                 <button v-if="detailProgram.comparisonOptions.length" type="button" class="program-card-help"
@@ -105,7 +102,7 @@ const isExcludedAddon = (addon) => {
                     class="addon program-card-surface"
                     :aria-pressed="Boolean(addon.isActive)"
                     @click="propertyStore.selectAddon(addon)"
-                    :disabled="isExcludedAddon(addon)"
+                    :disabled="addon.isIncluded || addon.isExcluded || addon.isComposite"
                 >
                     <span class="image">
                         <img v-if="addon.image" :src="addon.image" alt="">
@@ -114,10 +111,10 @@ const isExcludedAddon = (addon) => {
                         <span class="name">{{ addon.name }}</span>
                         <span class="details">
                             <span class="price">
-                                <svg class="__svg program-detail-icon">
+                                <svg v-if="!addon.isIncluded && !addon.isExcluded && !addon.isComposite" class="__svg program-detail-icon">
                                     <use xlink:href="#cash"></use>
                                 </svg>
-                                {{ getPrice(addon.price) }}
+                                {{ addon.isIncluded ? 'Включено' : addon.isExcluded ? 'Недоступно' : addon.isComposite ? 'В составе' : getPrice(addon.price) }}
                             </span>
                             <span class="price">
                                 <svg class="__svg program-detail-icon">
@@ -156,7 +153,6 @@ const isExcludedAddon = (addon) => {
 
 <style scoped>
 .program-detail-icon {
-    color: var(--green-color);
     width: 1.5em;
     height: 1.5em;
 }
@@ -201,6 +197,14 @@ const isExcludedAddon = (addon) => {
 }
 
 .program-details-heading {
+    min-width: 0;
+}
+
+.program-details-title {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem;
     min-width: 0;
 }
 

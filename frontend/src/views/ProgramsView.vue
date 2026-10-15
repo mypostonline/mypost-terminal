@@ -6,12 +6,12 @@ import { getPrice, wordEndPasses } from "@/functions/helpers.js";
 import CallSupportComponent from "@/components/CallSupportComponent.vue";
 import FixedActions from "@/components/FixedActions.vue";
 import ProgramOptionsDialog from "@/components/ProgramOptionsDialog.vue";
+import ProgramPopularBadge from "@/components/ProgramPopularBadge.vue";
 
 const propertyStore = usePropertyStore();
 const { property, hasAdditionalServices } = storeToRefs(propertyStore);
 
 const selectProgram = programId => {
-    propertyStore.resetAddons();
     propertyStore.setProgram(programId);
 };
 
@@ -85,7 +85,10 @@ const selectedProgram = computed(() => programCards.value.find(program => progra
                 />
                 <div class="program-card-summary">
                     <div class="program-card-heading">
-                        <h2 class="program-card-name">{{ program.name }}</h2>
+                        <div class="program-card-title">
+                            <h2 class="program-card-name">{{ program.name }}</h2>
+                            <program-popular-badge v-if="program.popular" />
+                        </div>
                         <button
                             v-if="program.comparisonOptions.length"
                             type="button"
@@ -193,19 +196,23 @@ const selectedProgram = computed(() => programCards.value.find(program => progra
     isolation: isolate;
     pointer-events: none;
     flex: 1;
-    min-height: 10rem;
-    margin: -0.85rem -0.85rem 0;
-    padding: 0.85rem 0.85rem .85rem;
-    overflow: hidden;
-    border-radius: 0.85rem 0.85rem 0 0;
+    min-height: 5rem;
 }
 
 .program-card-name {
     min-width: 0;
     margin: 0;
-    font-size: clamp(20px, 1.1rem, 40px);
+    font-size: clamp(18px, 0.95rem, 32px);
     font-weight: 700;
     line-height: 1.15;
+}
+
+.program-card-title {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    min-width: 0;
 }
 
 .program-card-heading {
@@ -229,13 +236,13 @@ const selectedProgram = computed(() => programCards.value.find(program => progra
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
-    font-size: clamp(12px, 0.8rem, 21px);
+    font-size: clamp(20px, 0.95rem, 32px);
     font-weight: 600;
 }
 
 .program-card-price {
     margin-left: auto;
-    font-size: clamp(18px, 0.95rem, 35px);
+    font-size: clamp(18px, 0.95rem, 32px);
     font-weight: 700;
 }
 

@@ -9,7 +9,7 @@
     --blue-color: #3977C4;
     --green-color: #24a529;
     --red-color: #ff0000;
-    --orange-color: #fd4807;
+    --orange-color: #ff6e00;
 }
 
 html {
@@ -545,6 +545,7 @@ main {
     padding-top: 0.25rem;
     margin-top: 0.75rem;
     border-top: 1px solid #ffffff;
+    font-size: clamp(20px,1.1rem,40px);
 }
 
 
@@ -569,6 +570,12 @@ main {
 .property-addons .addon:disabled {
     filter: grayscale(1);
     opacity: 0.75;
+    cursor: not-allowed;
+}
+
+.property-addons .addon:disabled.--active {
+    filter: none;
+    opacity: 1;
 }
 
 .property-addons .addon .image {

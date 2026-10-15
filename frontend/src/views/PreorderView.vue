@@ -21,7 +21,6 @@ const { property, post, program, order, hasAdditionalServices } = storeToRefs(pr
 
 onBeforeMount(() => {
     if (program.value.id === Number(route.params.programId)) return;
-    propertyStore.resetAddons();
     if (!propertyStore.setProgram(route.params.programId)) {
         router.replace('/programs');
     }
@@ -190,7 +189,7 @@ onBeforeUnmount(() => {
                     >
                         <div v-if="addon.isActive" class="item">
                             <span>{{ addon.name }}</span>
-                            <span v-if="!addon.isComposite && !addon.isIncluded">{{ getPrice(addon.price) }}</span>
+                            <span>{{ addon.isIncluded ? 'Включено' : addon.isComposite ? 'В составе' : getPrice(addon.price) }}</span>
                         </div>
                     </template>
                 </template>
@@ -213,7 +212,11 @@ onBeforeUnmount(() => {
         </div>
         <section class="payment-choice mt-6" aria-labelledby="payment-choice-title">
             <h2 id="payment-choice-title" class="payment-choice-title">Выберите способ оплаты</h2>
-            <div v-if="paymentMethods.length" class="payment-methods">
+            <div
+                v-if="paymentMethods.length"
+                class="payment-methods"
+                :style="{ '--payment-method-count': paymentMethods.length }"
+            >
                 <div
                     v-for="paymentMethod in paymentMethods"
                     :key="paymentMethod.code"
@@ -309,7 +312,7 @@ onBeforeUnmount(() => {
 
 .payment-methods {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(var(--payment-method-count), minmax(0, 1fr));
     align-items: start;
     gap: 0.75rem;
 }

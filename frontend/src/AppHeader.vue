@@ -26,8 +26,8 @@ const { isNavigationLocked } = storeToRefs(paymentStore);
         </div>
         <div class="schedule">
             <template v-if="property?.id">
-                <span v-if="route.name === 'program'">Сухая уборка {{ property.dry_working_hours }}</span>
-                <span v-else>Режим работы {{ property.working_hours }}</span>
+                <span v-if="route.name === 'program'">Сухая уборка: {{ property.dry_working_hours }}</span>
+                <span v-else>Режим работы: {{ property.working_hours }}</span>
             </template>
         </div>
     </header>

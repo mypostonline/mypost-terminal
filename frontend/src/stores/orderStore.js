@@ -92,14 +92,21 @@ export const useOrderStore = defineStore('orderStore', () => {
         }
     };
 
-    const paidOrder = async (orderId, paidAmount) => {
+    const paidOrder = async (orderId, paidAmount, vendotekOperationNumber = null) => {
         const id = normalizeOrderId(orderId);
         const response = await api(`/orders/${id}/paid`, {
             method: 'POST',
             headers: {
-                'Idempotency-Key': `terminal-order-paid-${id}`,
+                'Idempotency-Key': vendotekOperationNumber == null
+                    ? `terminal-order-paid-${id}`
+                    : `terminal-paid-${id}-${vendotekOperationNumber}`,
             },
-            data: { paid_amount: paidAmount },
+            data: {
+                paid_amount: paidAmount,
+                ...(vendotekOperationNumber != null && {
+                    vendotek_operation_number: String(vendotekOperationNumber),
+                }),
+            },
         });
 
         if (response?.success === false || response?.error) {

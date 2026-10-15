@@ -32,6 +32,7 @@ export const usePaymentStore = defineStore('paymentStore', () => {
     const phase = ref('idle');
     const orderSnapshot = ref(null);
     const paidAmount = ref(null);
+    const vendotekOperationNumber = ref(null);
     const error = ref('');
 
     const orderId = computed(() => orderSnapshot.value?.id);
@@ -40,6 +41,7 @@ export const usePaymentStore = defineStore('paymentStore', () => {
     const prepare = order => {
         orderSnapshot.value = sanitizeOrder(order);
         paidAmount.value = null;
+        vendotekOperationNumber.value = null;
         error.value = '';
         phase.value = 'prepared';
     };
@@ -51,14 +53,18 @@ export const usePaymentStore = defineStore('paymentStore', () => {
             orderSnapshot.value = sanitizeOrder(order);
             if (!isSameOrder) {
                 paidAmount.value = null;
+                vendotekOperationNumber.value = null;
             }
         }
         phase.value = 'processing';
         error.value = '';
     };
 
-    const markApproved = amount => {
+    const markApproved = (amount, operationNumber = null) => {
         paidAmount.value = Number(amount);
+        vendotekOperationNumber.value = operationNumber == null
+            ? null
+            : String(operationNumber);
         phase.value = 'reconciling';
         error.value = '';
     };
@@ -87,6 +93,7 @@ export const usePaymentStore = defineStore('paymentStore', () => {
         phase.value = 'idle';
         orderSnapshot.value = null;
         paidAmount.value = null;
+        vendotekOperationNumber.value = null;
         error.value = '';
     };
 
@@ -105,6 +112,7 @@ export const usePaymentStore = defineStore('paymentStore', () => {
         orderSnapshot,
         orderId,
         paidAmount,
+        vendotekOperationNumber,
         error,
         isNavigationLocked,
         prepare,

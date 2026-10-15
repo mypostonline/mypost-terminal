@@ -229,7 +229,7 @@ describe('OrderView fixed actions', () => {
         expect(buttons().some(el => el.textContent.includes('Одобрить оплату'))).toBe(false);
         await wrapper.get('.payment-test-actions button').trigger('click');
         await flushPromises();
-        expect(orderStore.paidOrder).toHaveBeenCalledWith(91, 1250);
+        expect(orderStore.paidOrder).toHaveBeenCalledWith(91, 1250, null);
         expect(homeLink()).not.toBeNull();
         expect(buttons()).toHaveLength(1);
         expect(paymentStore.phase).toBe('completed');
@@ -237,6 +237,16 @@ describe('OrderView fixed actions', () => {
         await flushPromises();
         expect(router.currentRoute.value.name).toBe('home');
         expect(paymentStore.phase).toBe('idle');
+    });
+
+    it('passes the Vendotek operation number to the paid order request', async () => {
+        await openOrder();
+        await updateSession('card-payment', {
+            state: 'completed', approvedAmountMinor: 125000, operationNumber: 347,
+        });
+
+        expect(orderStore.paidOrder).toHaveBeenCalledWith(91, 1250, '347');
+        expect(paymentStore.vendotekOperationNumber).toBe('347');
     });
 
     it('allows only support while confirming an approved payment', async () => {

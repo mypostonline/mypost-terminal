@@ -4,6 +4,7 @@ const { createServices } = require('./create-services');
 const { createApp } = require('./api/app');
 const { createWebSocketHub } = require('./realtime/websocket-hub');
 const { wireEvents } = require('./realtime/wire-events');
+const { FiscalReceiptSync } = require('./payments/fiscal-receipt-sync');
 
 const listen = (server, port) => new Promise((resolve, reject) => {
     const onError = error => {
@@ -61,6 +62,13 @@ const createBackend = ({
         services,
         broadcast: realtime.broadcast,
         debug: config.debug,
+        logger,
+    });
+    const fiscalReceiptSync = new FiscalReceiptSync({
+        terminal: services.cardTerminal,
+        cashPayments: services.cashPayments,
+        cardPayments: services.cardPayments,
+        config: config.fiscalReceiptSync,
         logger,
     });
 
@@ -132,6 +140,7 @@ const createBackend = ({
         }
 
         await listen(server, config.server.port);
+        fiscalReceiptSync.start();
         started = true;
         logger.log(
             new Date().toISOString(),
@@ -148,6 +157,7 @@ const createBackend = ({
 
         stopPromise = (async () => {
             services.cardTerminal.close();
+            fiscalReceiptSync.stop();
             await services.billAcceptor.stop();
             await services.billAcceptorRelay.close();
             unwireEvents();

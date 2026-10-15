@@ -90,7 +90,7 @@ const applySession = nextSession => {
         }
 
         approvedEmitted.value = true;
-        emit('approved', approvedAmount);
+        emit('approved', approvedAmount, nextSession.operationNumber ?? null);
         return;
     }
 
