@@ -63,9 +63,9 @@
         width: 100%;
         min-width: 0;
         padding: 0.65rem 0.4rem;
-        border: clamp(1px, 0.05rem, 2px) solid #b4c4d5;
+        border: 4px solid var(--primary-color);
         background: #ffffff;
-        font-size: clamp(14px, 0.7rem, 25px);
+        font-size: clamp(14px, 1rem, 28px);
         line-height: 1.25;
         overflow-wrap: anywhere;
     }

@@ -171,6 +171,8 @@ const selectedProgram = computed(() => programCards.value.find(program => progra
     gap: 0.8rem;
     padding: 0.85rem;
     text-decoration: none;
+    outline: 2px solid var(--primary-color);
+    outline-offset: -2px;
 }
 
 .program-card-link {
@@ -202,7 +204,7 @@ const selectedProgram = computed(() => programCards.value.find(program => progra
 .program-card-name {
     min-width: 0;
     margin: 0;
-    font-size: clamp(18px, 0.95rem, 32px);
+    font-size: clamp(18px, 0.95rem, 30px);
     font-weight: 700;
     line-height: 1.15;
 }
@@ -244,6 +246,10 @@ const selectedProgram = computed(() => programCards.value.find(program => progra
     margin-left: auto;
     font-size: clamp(18px, 0.95rem, 32px);
     font-weight: 700;
+    background: #ffffffbf;
+    border: 1px solid #ffffff73;
+    border-radius: 0.5rem;
+    padding: 0 0.25rem;
 }
 
 .program-options-hint {

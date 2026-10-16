@@ -152,7 +152,7 @@ onBeforeUnmount(() => {
                 <p v-if="!imageLoaded" role="status">Загружаем QR-код для оплаты…</p>
             </div>
             <p v-else role="alert">Не удалось загрузить QR-код. Вызовите оператора.</p>
-            <p>Время на оплату: <strong>{{ formatCountdown(secondsLeft) }}</strong></p>
+            <p>Время на оплату: <strong style="color: #24a529;">{{ formatCountdown(secondsLeft) }}</strong></p>
         </div>
         <p v-else role="status">{{ payment ? 'Проверяем итоговый статус оплаты… Не оплачивайте повторно.' : 'Получаем QR-код для оплаты…' }}</p>
         <p v-if="error" class="sbp-payment-error" role="alert">{{ error }}</p>

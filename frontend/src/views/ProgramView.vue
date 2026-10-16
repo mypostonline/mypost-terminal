@@ -177,10 +177,14 @@ onBeforeMount(() => {
 
 .program-view .property-program-details {
     --gradient-opacity: 0.75;
+    outline: 2px solid var(--primary-color);
+    outline-offset: -2px;
 }
 
 .program-view .property-addons .addon {
     --gradient-opacity: 0.4;
+    outline: 2px solid var(--primary-color);
+    outline-offset: -2px;
 }
 
 .program-view .property-program-details .header {
@@ -216,6 +220,10 @@ onBeforeMount(() => {
 
 .program-view .property-program-details .price {
     margin-left: auto;
+    background: #ffffffbf;
+    border: 1px solid #ffffff73;
+    border-radius: .5rem;
+    padding: 0 .25rem;
 }
 
 </style>
