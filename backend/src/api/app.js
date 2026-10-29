@@ -13,11 +13,16 @@ const DEFAULT_STATIC_DIR = path.resolve(
     __dirname,
     '../../../frontend/dist'
 );
+const DEFAULT_LOCAL_BANNERS_DIR = path.resolve(
+    __dirname,
+    '../../../frontend/public/assets/local'
+);
 
 const createApp = ({
     config,
     services,
     staticDir = DEFAULT_STATIC_DIR,
+    localBannersDir = DEFAULT_LOCAL_BANNERS_DIR,
 }) => {
     const app = express();
 
@@ -42,6 +47,8 @@ const createApp = ({
             config.billAcceptor.driver === 'mock',
     });
 
+    app.use('/assets/local', express.static(localBannersDir));
+    app.use('/assets/local', (_req, res) => res.sendStatus(404));
     app.use(express.static(staticDir));
     app.get(/.*/, (req, res) => {
         res.sendFile(path.join(staticDir, 'index.html'));
@@ -52,5 +59,6 @@ const createApp = ({
 
 module.exports = {
     DEFAULT_STATIC_DIR,
+    DEFAULT_LOCAL_BANNERS_DIR,
     createApp,
 };

@@ -10,7 +10,7 @@ const qr = 't=20261013T1206&s=50.00&fn=7381440901358112&i=247&fp=88689612&n=1';
 const now = () => Date.parse('2026-10-13T09:06:42Z');
 const silentLogger = { log () {}, error () {} };
 
-function makeSync(outboxFile, fetchImpl) {
+function makeSync(outboxFile, fetchImpl, currentTime = now) {
     return new FiscalReceiptSync({
         terminal: new EventEmitter(),
         cashPayments: new EventEmitter(),
@@ -19,7 +19,7 @@ function makeSync(outboxFile, fetchImpl) {
             apiUrl: 'https://api.example.test',
             outboxFile, timezoneOffsetMinutes: 180,
         },
-        logger: silentLogger, fetchImpl, now,
+        logger: silentLogger, fetchImpl, now: currentTime,
     });
 }
 
@@ -83,6 +83,31 @@ test('does not assign a QR when matching sessions are ambiguous', () => {
     assert.equal(sync.pendingQr.length, 1);
     fs.unlinkSync(outboxFile);
     fs.rmdirSync(directory);
+});
+
+test('matches a delayed QR by unique Vendotek event number and amount', async t => {
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'mypost-delayed-'));
+    const outboxFile = path.join(directory, 'outbox.json');
+    t.after(() => {
+        if (fs.existsSync(outboxFile)) fs.unlinkSync(outboxFile);
+        fs.rmdirSync(directory);
+    });
+    const currentTime = () => Date.parse('2026-10-13T09:20:30Z');
+    const sync = makeSync(outboxFile, async () => { throw new Error('offline'); }, currentTime);
+    sync.handlePayment('cash', {
+        event: 'completed', session: {
+            id: '4404d842-37db-4a35-8836-240c36c81824',
+            orderId: '55586', completedAt: '2026-10-13T09:06:21Z',
+            acceptedAmountMinor: 5000,
+            fiscalization: { state: 'completed', eventNumber: '16', amountMinor: 5000 },
+        },
+    });
+    const delayedQr = qr.replace('T1206', 'T1220');
+    sync.handleMessage({ fiscalQr: delayedQr, eventNumber: '16' });
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(sync.outbox.length, 1);
+    assert.equal(sync.outbox[0].orderId, 55586);
+    assert.equal(sync.outbox[0].body.qr, delayedQr);
 });
 
 test('keeps the completed session across restart while waiting for the QR', async t => {

@@ -54,6 +54,15 @@
     min-width: 0;
 }
 
+.program-card-options button.program-option {
+    cursor: pointer;
+}
+
+.program-card-options button.program-option:focus-visible {
+    outline: 3px solid var(--primary-color);
+    outline-offset: 3px;
+}
+
 .program-option-descriptions {
     display: grid;
     gap: 0.5rem;

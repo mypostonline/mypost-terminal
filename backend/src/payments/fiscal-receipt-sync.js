@@ -165,13 +165,20 @@ class FiscalReceiptSync {
         this.delivered = this.delivered.filter(item =>
             item.at >= this.now() - DELIVERED_AGE_MS);
         for (const item of [ ...this.pendingQr ]) {
-            const matches = this.candidates.filter(candidate =>
+            const identityMatches = this.candidates.filter(candidate =>
                 candidate.amountMinor === item.receipt.amountMinor &&
-                Math.abs(candidate.completedAt - item.receipt.fiscalAt) <= MATCH_WINDOW_MS &&
                 (candidate.method === 'cash'
                     ? String(item.message.eventNumber ?? '') === candidate.number
                     : String(item.message.operationNumber ?? '') === candidate.number)
             );
+            const nearbyMatches = identityMatches.filter(candidate =>
+                Math.abs(candidate.completedAt - item.receipt.fiscalAt) <= MATCH_WINDOW_MS
+            );
+            const delayedMatches = identityMatches.filter(candidate =>
+                item.receipt.fiscalAt >= candidate.completedAt - MATCH_WINDOW_MS &&
+                item.receipt.fiscalAt <= candidate.completedAt + MAX_AGE_MS
+            );
+            const matches = nearbyMatches.length ? nearbyMatches : delayedMatches;
             if (matches.length !== 1) {
                 if (matches.length > 1) {
                     this.logger.error('[Fiscal receipt sync] ambiguous receipt match',

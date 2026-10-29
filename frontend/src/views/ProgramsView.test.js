@@ -152,11 +152,13 @@ describe('program comparison cards', () => {
         expect(wrapper.find('.program-option-descriptions').exists()).toBe(false);
     });
 
-    it('does not show descriptions when an option icon is clicked', async () => {
-        expect(wrapper.find('.program-card-options button').exists()).toBe(false);
-        await cards()[0].get('.program-option').trigger('click');
-        expect(wrapper.find('.program-option-descriptions').exists()).toBe(false);
-        expect(wrapper.find('.program-option-popover').exists()).toBe(false);
+    it('opens descriptions from an option icon without selecting the program', async () => {
+        const icon = cards()[0].get('.program-card-options button.program-option');
+        expect(icon.attributes('aria-haspopup')).toBe('dialog');
+        await icon.trigger('click');
+        expect(wrapper.get('.program-option-descriptions').text()).toContain('Вода');
+        expect(wrapper.get('dialog').attributes('open')).toBeDefined();
+        expect(icon.attributes('aria-expanded')).toBe('true');
         expect(router.currentRoute.value.path).toBe('/programs');
     });
 

@@ -105,18 +105,22 @@ const selectedProgram = computed(() => programCards.value.find(program => progra
                 <div v-if="program.comparisonOptions.length" class="program-card-option-block">
                     <ul class="program-card-options" aria-label="Состав программы">
                         <li v-for="option in program.comparisonOptions" :key="option.key">
-                            <div
-                                role="img"
+                            <button
+                                type="button"
                                 class="program-option"
                                 :class="{ '--included': option.included }"
                                 :aria-label="`${option.label}: ${option.included ? 'входит в программу' : 'не входит в программу'}`"
+                                :aria-expanded="expandedProgramId === program.id"
+                                aria-controls="program-options-dialog"
+                                aria-haspopup="dialog"
+                                @click="toggleDescriptions(program.id)"
                             >
                                 <span class="program-option-icon" aria-hidden="true">
                                     <img v-if="option.image" :src="option.image" alt="">
                                     <svg v-else class="__svg"><use xlink:href="#receipt" /></svg>
                                 </span>
                                 <span v-if="option.included" class="program-option-check" aria-hidden="true">✓</span>
-                            </div>
+                            </button>
                         </li>
                     </ul>
                 </div>
@@ -130,7 +134,7 @@ const selectedProgram = computed(() => programCards.value.find(program => progra
             </article>
         </div>
         <p v-if="allOptions.length && programCards.length" class="program-options-hint">
-            Зелёным отмечены опции, входящие в программу. Нажмите «?», чтобы увидеть все описания опций.
+            Зелёным отмечены опции, входящие в программу. Нажмите «?» или иконку, чтобы увидеть описания опций.
         </p>
 
         <ProgramOptionsDialog :program="selectedProgram" @close="expandedProgramId = null" />

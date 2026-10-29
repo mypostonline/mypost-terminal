@@ -95,7 +95,8 @@ main {
     overflow: hidden
 }
 
-.banners .slide > img {
+.banners .slide > img,
+.banners .slide > video {
     border-radius: inherit;
     object-fit: cover;
     width: 100%;
