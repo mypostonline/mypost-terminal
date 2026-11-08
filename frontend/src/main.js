@@ -7,54 +7,68 @@ import App from './App.vue';
 import router from './router';
 import { usePaymentStore } from '@/stores/paymentStore.js';
 
-const app = createApp(App);
-const pinia = createPinia();
+const rotation = String(import.meta.env.VITE_ROTATE || 'none').trim().toLowerCase();
 
-app.use(pinia);
-const paymentStore = usePaymentStore(pinia);
+if (window.parent === window && (rotation === 'left' || rotation === 'right')) {
+    const appRoot = document.getElementById('app');
 
-router.beforeEach((to, from) => {
-    const isInitialNavigation = from.matched.length === 0;
-    const isActivePaymentRoute =
-        to.name === 'order' &&
-        paymentStore.matchesOrder(to.params.orderId);
+    // Give the terminal its own portrait viewport, including teleported panels and dialogs.
+    const frame = document.createElement('iframe');
+    frame.className = `rotated-terminal rotated-terminal--${rotation}`;
+    frame.title = 'MYPOST TERMINAL';
+    frame.src = window.location.href;
+    document.documentElement.classList.add('terminal-rotated');
+    appRoot.replaceWith(frame);
+} else {
+    const app = createApp(App);
+    const pinia = createPinia();
 
-    if (
-        isInitialNavigation &&
-        paymentStore.isNavigationLocked &&
-        paymentStore.orderId &&
-        !isActivePaymentRoute
-    ) {
-        return {
-            name: 'order',
-            params: { orderId: paymentStore.orderId },
-        };
-    }
+    app.use(pinia);
+    const paymentStore = usePaymentStore(pinia);
 
-    if (isInitialNavigation && to.name !== 'home') {
-        const canRecoverPayment =
+    router.beforeEach((to, from) => {
+        const isInitialNavigation = from.matched.length === 0;
+        const isActivePaymentRoute =
             to.name === 'order' &&
-            paymentStore.isRecoverableOrder(to.params.orderId);
-        if (!canRecoverPayment) {
-            return { name: 'home' };
+            paymentStore.matchesOrder(to.params.orderId);
+
+        if (
+            isInitialNavigation &&
+            paymentStore.isNavigationLocked &&
+            paymentStore.orderId &&
+            !isActivePaymentRoute
+        ) {
+            return {
+                name: 'order',
+                params: { orderId: paymentStore.orderId },
+            };
         }
-    }
 
-    if (paymentStore.isNavigationLocked && !isActivePaymentRoute) {
-        return false;
-    }
+        if (isInitialNavigation && to.name !== 'home') {
+            const canRecoverPayment =
+                to.name === 'order' &&
+                paymentStore.isRecoverableOrder(to.params.orderId);
+            if (!canRecoverPayment) {
+                return { name: 'home' };
+            }
+        }
 
-    if (
-        from.name === 'order' &&
-        to.fullPath !== from.fullPath &&
-        paymentStore.isNavigationLocked
-    ) {
-        return false;
-    }
+        if (paymentStore.isNavigationLocked && !isActivePaymentRoute) {
+            return false;
+        }
 
-    return true;
-});
+        if (
+            from.name === 'order' &&
+            to.fullPath !== from.fullPath &&
+            paymentStore.isNavigationLocked
+        ) {
+            return false;
+        }
 
-app.use(router);
+        return true;
+    });
 
-app.mount('#app');
+    app.use(router);
+
+    app.mount('#app');
+}

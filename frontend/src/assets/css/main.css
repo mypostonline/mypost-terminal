@@ -52,6 +52,31 @@ h3 {
     margin: 0 auto;
 }
 
+html.terminal-rotated,
+html.terminal-rotated body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.rotated-terminal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vh;
+    height: 100vw;
+    border: 0;
+    transform-origin: top left;
+}
+
+.rotated-terminal--right {
+    transform: translateX(100vw) rotate(90deg);
+}
+
+.rotated-terminal--left {
+    transform: translateY(100vh) rotate(-90deg);
+}
+
 header {
     display: grid;
     grid-template-columns: 1fr 3fr;
