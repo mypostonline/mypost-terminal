@@ -79,13 +79,13 @@ describe('program comparison cards', () => {
         expect(wrapper.find('.card_background').exists()).toBe(false);
     });
 
-    it('uses the same deduplicated option order and marks only included options', () => {
+    it('shows included options first in each card and preserves the catalog order within groups', () => {
         expect(labels(cards()[0])).toEqual(['Вода', 'Пена', 'Воск']);
-        expect(labels(cards()[1]).map(label => label.split(' (')[0])).toEqual(['Вода', 'Пена', 'Воск']);
+        expect(labels(cards()[1]).map(label => label.split(' (')[0])).toEqual(['Вода', 'Воск', 'Пена']);
         expect(cards()[0].findAll('.program-option.--included').map(el => el.attributes('aria-label').split(':')[0])).toEqual(['Вода', 'Пена']);
-        expect(cards()[1].findAll('.program-option').map(el => el.classes().includes('--included'))).toEqual([true, false, true]);
-        expect(cards()[1].findAll('.program-option')[1].attributes('aria-label')).toContain('не входит');
-        expect(cards()[1].findAll('.program-option')[2].attributes('aria-label')).toContain('2');
+        expect(cards()[1].findAll('.program-option').map(el => el.classes().includes('--included'))).toEqual([true, true, false]);
+        expect(cards()[1].findAll('.program-option')[1].attributes('aria-label')).toContain('2');
+        expect(cards()[1].findAll('.program-option')[2].attributes('aria-label')).toContain('не входит');
         expect(cards()[0].find('.program-option-icon svg').exists()).toBe(true);
     });
 
@@ -152,14 +152,15 @@ describe('program comparison cards', () => {
         expect(wrapper.find('.program-option-descriptions').exists()).toBe(false);
     });
 
-    it('opens descriptions from an option icon without selecting the program', async () => {
-        const icon = cards()[0].get('.program-card-options button.program-option');
-        expect(icon.attributes('aria-haspopup')).toBe('dialog');
+    it('keeps option icons informational while the card link opens the program', async () => {
+        const icon = cards()[0].get('.program-card-options .program-option');
+        expect(icon.element.tagName).toBe('DIV');
+        expect(icon.attributes('role')).toBe('img');
         await icon.trigger('click');
-        expect(wrapper.get('.program-option-descriptions').text()).toContain('Вода');
-        expect(wrapper.get('dialog').attributes('open')).toBeDefined();
-        expect(icon.attributes('aria-expanded')).toBe('true');
-        expect(router.currentRoute.value.path).toBe('/programs');
+        expect(wrapper.find('.program-option-descriptions').exists()).toBe(false);
+        await cards()[0].get('.program-card-link').trigger('click');
+        await flushPromises();
+        expect(router.currentRoute.value.path).toBe('/programs/1');
     });
 
     it('opens descriptions only for the selected card', async () => {

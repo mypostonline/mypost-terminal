@@ -15,7 +15,7 @@
     flex-shrink: 0;
     padding: 0.2rem 0.4rem;
     border-radius: 0.35rem;
-    background: #ff6e00;
+    background: var(--orange-color);
     color: #fff;
     font-size: 0.625rem;
     font-weight: 800;

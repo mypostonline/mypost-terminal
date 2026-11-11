@@ -50,19 +50,24 @@ const programCards = computed(() => (property.value?.programs || [])
     .filter(isProgramAvailable)
     .map(program => {
         const included = new Map((program.options || []).map(option => [optionKey(option), option]));
+        const comparisonOptions = allOptions.value.map(option => {
+            const selected = included.get(option.key);
+            const passes = selected?.passes ? ` (${wordEndPasses(selected.passes)})` : '';
+            return {
+                ...option,
+                included: Boolean(selected),
+                description: selected?.description || option.description,
+                label: `${option.name}${passes}`,
+            };
+        });
         return {
             ...program,
             description: typeof program.description === 'string' ? program.description.trim() : '',
-            comparisonOptions: allOptions.value.map(option => {
-                const selected = included.get(option.key);
-                const passes = selected?.passes ? ` (${wordEndPasses(selected.passes)})` : '';
-                return {
-                    ...option,
-                    included: Boolean(selected),
-                    description: selected?.description || option.description,
-                    label: `${option.name}${passes}`,
-                };
-            }),
+            comparisonOptions,
+            cardOptions: [
+                ...comparisonOptions.filter(option => option.included),
+                ...comparisonOptions.filter(option => !option.included),
+            ],
         };
     }));
 const selectedProgram = computed(() => programCards.value.find(program => program.id === expandedProgramId.value));
@@ -104,23 +109,19 @@ const selectedProgram = computed(() => programCards.value.find(program => progra
                 </div>
                 <div v-if="program.comparisonOptions.length" class="program-card-option-block">
                     <ul class="program-card-options" aria-label="Состав программы">
-                        <li v-for="option in program.comparisonOptions" :key="option.key">
-                            <button
-                                type="button"
+                        <li v-for="option in program.cardOptions" :key="option.key">
+                            <div
                                 class="program-option"
                                 :class="{ '--included': option.included }"
+                                role="img"
                                 :aria-label="`${option.label}: ${option.included ? 'входит в программу' : 'не входит в программу'}`"
-                                :aria-expanded="expandedProgramId === program.id"
-                                aria-controls="program-options-dialog"
-                                aria-haspopup="dialog"
-                                @click="toggleDescriptions(program.id)"
                             >
                                 <span class="program-option-icon" aria-hidden="true">
                                     <img v-if="option.image" :src="option.image" alt="">
                                     <svg v-else class="__svg"><use xlink:href="#receipt" /></svg>
                                 </span>
                                 <span v-if="option.included" class="program-option-check" aria-hidden="true">✓</span>
-                            </button>
+                            </div>
                         </li>
                     </ul>
                 </div>
@@ -134,7 +135,7 @@ const selectedProgram = computed(() => programCards.value.find(program => progra
             </article>
         </div>
         <p v-if="allOptions.length && programCards.length" class="program-options-hint">
-            Зелёным отмечены опции, входящие в программу. Нажмите «?» или иконку, чтобы увидеть описания опций.
+            Зелёным отмечены опции, входящие в программу. Нажмите «?», чтобы увидеть описания опций.
         </p>
 
         <ProgramOptionsDialog :program="selectedProgram" @close="expandedProgramId = null" />
@@ -203,6 +204,16 @@ const selectedProgram = computed(() => programCards.value.find(program => progra
     pointer-events: none;
     flex: 1;
     min-height: 5rem;
+}
+
+.program-card-help::before {
+    content: '';
+    position: absolute;
+    inset: -0.75rem;
+}
+
+.program-card-option-block {
+    pointer-events: none;
 }
 
 .program-card-name {
