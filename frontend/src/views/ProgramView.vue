@@ -26,18 +26,23 @@ const detailProgram = computed(() => {
         }
     }
     const included = new Map((program.value.options || []).map(option => [optionKey(option), option]));
+    const comparisonOptions = [...catalog.values()].map(option => {
+        const selected = included.get(option.key);
+        return {
+            ...option,
+            included: Boolean(selected),
+            description: selected?.description || option.description,
+            label: `${option.name}${selected?.passes ? ` (${wordEndPasses(selected.passes)})` : ''}`,
+        };
+    });
     return {
         ...program.value,
         description: typeof program.value.description === 'string' ? program.value.description.trim() : '',
-        comparisonOptions: [...catalog.values()].map(option => {
-            const selected = included.get(option.key);
-            return {
-                ...option,
-                included: Boolean(selected),
-                description: selected?.description || option.description,
-                label: `${option.name}${selected?.passes ? ` (${wordEndPasses(selected.passes)})` : ''}`,
-            };
-        }),
+        comparisonOptions,
+        cardOptions: [
+            ...comparisonOptions.filter(option => option.included),
+            ...comparisonOptions.filter(option => !option.included),
+        ],
     };
 });
 
@@ -72,7 +77,7 @@ onBeforeMount(() => {
                     aria-haspopup="dialog" aria-controls="program-options-dialog" @click="showOptions = true">?</button>
             </div>
             <ul v-if="detailProgram.comparisonOptions.length" class="program-card-options" aria-label="Состав программы">
-                <li v-for="option in detailProgram.comparisonOptions" :key="option.key">
+                <li v-for="option in detailProgram.cardOptions" :key="option.key">
                     <div class="program-option" :class="{ '--included': option.included }" role="img"
                         :aria-label="`${option.label}: ${option.included ? 'входит в программу' : 'не входит в программу'}`">
                         <span class="program-option-icon" aria-hidden="true">

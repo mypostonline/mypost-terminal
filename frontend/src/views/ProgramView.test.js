@@ -52,6 +52,17 @@ it('places the title above icon-only options and duration beside the price below
     expect(block.get('.footer .price').text()).toContain('300');
 });
 
+it('places included options before the others on the selected program screen', async () => {
+    wrapper.unmount();
+    await router.push('/programs/2');
+    wrapper = mount(ProgramView, { attachTo: document.body, global: { plugins: [pinia, router] } });
+    await flushPromises();
+
+    const options = wrapper.findAll('.program-card-options .program-option');
+    expect(options.map(option => option.attributes('aria-label').split(':')[0])).toEqual(['Воск', 'Пена']);
+    expect(options.map(option => option.classes().includes('--included'))).toEqual([true, false]);
+});
+
 it('redirects a directly opened program without additional services to preorder', async () => {
     wrapper.unmount();
     propertyStore.property.addons = [];
